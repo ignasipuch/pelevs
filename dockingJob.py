@@ -79,8 +79,17 @@ class DockingJob:
                 '    SCORING_FUNCTION RbtCavityGridSF\n'
                 '    WEIGHT 1.0\n'
                 'END_SECTION\n')
-          
-        
+                
+    def _rdockGridGenerator(self):
+
+        with open('3_docking_job/job/run_grid.sh', 'w') as fileout:
+            fileout.writelines(
+                'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
+            )   
+            
+    def _rdockJobSplitter(self):
+        pass
+           
     def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
         
         self.grid_file = grid_file
@@ -98,8 +107,7 @@ class DockingJob:
             ])
             
         print(' - Glide job generated succesfully.')
-                  
-            
+                             
     def setRdockDocking(self, reference_ligand):
                    
         self.reference_ligand = reference_ligand
@@ -112,3 +120,4 @@ class DockingJob:
         shutil.copy('1_input_files/receptor/' + self.receptor, '3_docking_job/job')
         
         self._paramFilesWriter(self.receptor, self.reference_ligand)
+        self._rdockGridGenerator()
