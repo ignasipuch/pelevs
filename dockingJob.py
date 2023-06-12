@@ -9,7 +9,7 @@ class DockingJob:
         self.receptor = receptor.split('/')[-1]
         self.ligands = ligands.split('/')[-1]
         self.docking_tool = None
-        self.grid = None
+        self.grid_file = None
         self.reference_ligand = None
         
         self._ligandsChecker(ligands)
@@ -29,6 +29,21 @@ class DockingJob:
             
         if not os.path.isdir('3_docking_job/job'):
             os.mkdir('3_docking_job/job')
+            
+    def _glidePrepareJob(self, grid_file, forcefield):
+        
+        shutil.copy(grid_file, '3_docking_job/job')
+        shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
+            
+        with open('3_docking_job/job/glide_job.in', 'w') as filein:
+            filein.writelines([
+                'FORCEFIELD   {}\n'.format(forcefield),
+                'GRIDFILE   {}\n'.format(grid_file),
+                'LIGANDFILE   {}\n'.format(self.ligands),
+                'PRECISION   SP\n'
+            ])
+            
+        print(' - Glide job generated succesfully with grid {grid} and forcefield {ff}.'.format(grid=grid_file, ff=forcefield))
 
     def _rdockReceptorFormatChecker(self, receptor):
         
@@ -40,10 +55,15 @@ class DockingJob:
 
         if receptor_format != 'mol2':
             receptor_generator = pybel.readfile(receptor_format, '1_input_files/receptor/' + receptor)
-            receptor_molecule = next(receptor_generator)  # Convert generator to molecule object
+            receptor_molecule = next(receptor_generator) 
             receptor_molecule.write("mol2", "3_docking_job/job/{}.mol2".format(receptor_name), overwrite=True)
             
         else: pass
+    
+    def _rdockFileCopier(self, reference_ligand):
+        shutil.copy(reference_ligand, '3_docking_job/job')
+        shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
+        shutil.copy('1_input_files/receptor/' + self.receptor, '3_docking_job/job')
         
     def _rdockParamFilesWriter(self, receptor, reference_ligand):
             
@@ -169,36 +189,128 @@ class DockingJob:
                 'for d in run*; do echo ${d}; sbatch ${d}; done'   
             )
             
+    def _equibindReceptorFormatChecker(self, receptor):
+        
+        if len(receptor.split('.')) == 2:
+            receptor_name, receptor_format = receptor.split('.')
+            
+        else:
+            raise Exception('ReceptorNameError: Receptor name should only have one dot separating the name and the format.')
+        
+        if receptor_format != 'pdb':
+            receptor_generator = pybel.readfile(receptor_format, '1_input_files/receptor/' + receptor)
+            receptor_molecule = next(receptor_generator) 
+            receptor_molecule.write("pdb", "3_docking_job/{}.pdb".format(receptor_name), overwrite=True)
+                  
+    def _equibindSplitLigands(self, ligands):
+
+        with open(ligands, 'r') as f:
+            content = f.read().strip()
+
+        records = content.split('$$$$')
+
+        for record in records:
+            if record.strip():
+                
+                # Extract the value of the property for naming the output file
+                variant_value = None
+                lines = record.split('\n')
+                for line in lines:
+                    if '<s_lp_Variant>' in line:
+                        variant_value = lines[lines.index(line) + 1]
+                        break
+
+                if variant_value:
+                    output_file = variant_value + '.sdf'
+                    
+                    if not os.path.isdir('3_docking_job/job/equibind_calculations'):
+                        os.mkdir('3_docking_job/job/equibind_calculations')
+                    
+                    if not os.path.isdir('3_docking_job/job/equibind_results'):
+                        os.mkdir('3_docking_job/job/equibind_results')
+                    
+                    if not os.path.isdir('3_docking_job/job/{}'.format(variant_value)):
+                        os.mkdir('3_docking_job/job/{}'.format(variant_value))
+
+                    # Write the record to the output file
+                    with open('3_docking_job/job/{folder}/{output}'.format(folder=variant_value, output=output_file), 'w') as f:
+                        f.write(record + '$$$$')
+    
+    def _equibindFolderPreparation(self, receptor):
+        for folder in os.listdir('3_docking_job/job'):
+            folder_path = os.path.join('3_docking_job/job', folder)
+            
+            if os.path.isdir(folder_path):
+                destination_protein = os.path.join(folder_path, folder + "_protein.pdb")
+                destination_ligands = os.path.join(folder_path, folder + "_ligand.sdf")
+                
+                shutil.copyfile('3_docking_job/{}'.format(receptor), destination_protein)
+                os.rename('3_docking_job/{}/{}.sdf'.format(folder),destination_ligands)
+                
+    def _equibindFilesPreparation(self):
+        
+        with open('3_docking_job/job/run', 'w') as fileout:
+            fileout.writelines(
+            '#!/bin/bash\n'
+            '#SBATCH --job-name=equi\n'
+            '#SBATCH --time=1:00:00\n'
+            '#SBATCH --gres gpu:1\n'
+            '#SBATCH --cpus-per-task=40\n'
+            '#SBATCH --ntasks=1\n'
+            '#SBATCH --output=equi.out\n'
+            '#SBATCH --error=equi.err\n'
+            '\n'
+            'module purge\n'
+            'module load anaconda3/2020.02\n'
+            'module list\n'
+            '\n'
+            'eval "$(conda shell.bash hook)"\n'
+            'conda activate /apps/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock\n'
+            '\n'
+            'cp -r /gpfs/apps/POWER9/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock/modules/EquiBind/runs .'
+            'python /gpfs/apps/POWER9/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock/modules/EquiBind/inference.py --config=inference.yml\n'
+            )
+            
+        with open('3_docking_job/job/inference.yml', 'w') as fileout:
+            fileout.writelines(
+            'run_dirs:\n'
+            '  - flexible_self_docking # the resulting coordinates will be saved here as tensors in a .pt file (but also as .sdf files if you specify an "output_directory" below)\n'
+            'inference_path: \'equibind_calculations\' # this should be your input file path as described in the main readme\n'
+            '\n'
+            'test_names: timesplit_test\n'
+            'output_directory: \'equibind_results\' # the predicted ligands will be saved as .sdf file here\n'
+            'run_corrections: True\n'
+            'use_rdkit_coords: False # generates the coordinates of the ligand with rdkit instead of using the provided conformer. If you already have a 3D structure that you want to use as initial conformer, then leave this as False\n'
+            'save_trajectories: False\n'
+            '\n'
+            'num_confs: 1 # usually this should be 1\n'
+            )
+                     
     def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
         
         self.grid_file = grid_file
         self.docking_tool = 'glide'
         
-        shutil.copy(grid_file, '3_docking_job/job')
-        shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
-            
-        with open('3_docking_job/job/glide_job.in', 'w') as filein:
-            filein.writelines([
-                'FORCEFIELD   {}\n'.format(forcefield),
-                'GRIDFILE   {}\n'.format(grid_file),
-                'LIGANDFILE   {}\n'.format(self.ligands),
-                'PRECISION   SP\n'
-            ])
-            
-        print(' - Glide job generated succesfully.')
-                          
+        self._glidePrepareJob(grid_file, forcefield)
+                  
     def setRdockDocking(self, reference_ligand, ligands, cpus_docking):
                    
         self.reference_ligand = reference_ligand
         self.docking_tool = 'rdock'
         
-        self._rdockReceptorFormatChecker(self.receptor)
-        
-        shutil.copy(reference_ligand, '3_docking_job/job')
-        shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
-        shutil.copy('1_input_files/receptor/' + self.receptor, '3_docking_job/job')
-        
+        self._rdockReceptorFormatChecker(self.receptor)       
+        self._rdockFileCopier(reference_ligand)  
         self._rdockParamFilesWriter(self.receptor, self.reference_ligand)
         self._rdockGridGenerator()
         self._rdockJobSplitter(ligands,cpus_docking)
         self._rdockRunFilesGenerator(cpus_docking)
+        
+    def setEquibindDocking(self, ligands, receptor):  
+    
+        self.docking_tool = 'equibind'
+        
+        self._equibindReceptorFormatChecker(receptor)
+        self._equibindSplitLigands(ligands)
+        self._equibindFolderPreparation(receptor)
+        self._equibindFilesPreparation()
+    
