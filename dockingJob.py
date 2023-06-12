@@ -45,7 +45,7 @@ class DockingJob:
             
         else: pass
         
-    def _paramFilesWriter(self, receptor, reference_ligand):
+    def _rdockParamFilesWriter(self, receptor, reference_ligand):
             
         parameter_file = os.path.join('3_docking_job/job', 'parameter_file.prm')
             
@@ -198,7 +198,7 @@ class DockingJob:
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
         shutil.copy('1_input_files/receptor/' + self.receptor, '3_docking_job/job')
         
-        self._paramFilesWriter(self.receptor, self.reference_ligand)
+        self._rdockParamFilesWriter(self.receptor, self.reference_ligand)
         self._rdockGridGenerator()
         self._rdockJobSplitter(ligands,cpus_docking)
         self._rdockRunFilesGenerator(cpus_docking)
