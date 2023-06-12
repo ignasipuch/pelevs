@@ -4,8 +4,78 @@ import shutil
 
 
 class DockingJob:
+    """
+    Attributes
+    ==========
+    receptor : str
+        Name of the receptor's file (sdf, mol2 or pdb).
+    ligands : str
+        Name of the file were ligands in a csv with SMILES are located.
+    docking_tool : str
+        Docking software wanted.
+    grid_file : str
+        Name of Glide's grid file (.zip)
+    reference_ligand : str
+        Name of the bound ligand that is going to be used to generate the cavity
+        and the grid with rDock.
+
+    Methods
+    =======
+    setGlideDocking(self, grid_file, forcefield)
+        Prepare a Glide docking folder with necessary files to send to a 
+        machine with SCHRÖDINGER's license and launch the job.    
+    setRdockDocking(self, reference_ligand, ligands, cpus_docking)
+        Prepare an rDock docking folder with necessary files to send to MN4
+        and launch the job.
+    setEquibindDocking(self, ligands, receptor)
+        Prepare an Equibind docking folder with necessary files to send to 
+        CTE-POWER and launch the job.
+
+
+    Hidden Methods
+    ==============
+    _ligandsChecker(self, ligands)
+        Checks if the ligands inputted come from a 
+        ligprep job with sdf format
+    _folderPreparation(self)
+        Prepares folder paths for the new docking job.
+    _glidePrepareJob(self, grid_file, forcefield)
+        Prepare files for a docking with Glide
+    _rdockReceptorFormatChecker(self, receptor)
+        Check receptor's file format and change it to mol2.
+    _rdockFileCopier(self, reference_ligand)
+        Copy important files to their assignesd places.
+    _rdockParamFilesWriter(self, receptor, reference_ligand)
+        Generate param file for the cavity generation and docking 
+        with rDock.
+    _rdockGridGenerator(self)
+        Generate files to send cavity and grid files generator job.
+    _rdockJobSplitter(self, ligands, cpus_docking)
+        Split the total number of molecules into number of cpus available.
+    _rdockRunFilesGenerator(self, cpus_docking)
+        Generate all the necessary run files.
+    _equibindReceptorFormatChecker(self, receptor)
+        Check if formats for equibind docking are correct.
+    _equibindSplitLigands(self, ligands)
+        Splitting ligprep's output sdf file into individual sdfs.
+    _equibindFolderPreparation(self, receptor)
+        Preparing folder system for equibind docking simulations.
+    _equibindFilesPreparation(self)
+        Writing necessary inference.yml and run files.
+    """
 
     def __init__(self, receptor='1_input_files/receptor/' + os.listdir('1_input_files/receptor/')[0], ligands='2_ligprep_job/job/' + [x for x in os.listdir('2_ligprep_job/job/') if x.endswith('.sdf')][0]):
+        """
+        Prepare files and folders coming from the liprep job in a 
+        directory to perform  acertain kind of docking.
+
+        Parameters
+        ==========
+        receptor : str
+            Name of the file with the receptor
+        ligands : str
+            Name of the csv file with SMILES and id.
+        """
 
         self.receptor = receptor.split('/')[-1]
         self.ligands = ligands.split('/')[-1]
@@ -17,6 +87,14 @@ class DockingJob:
         self._folderPreparation()
 
     def _ligandsChecker(self, ligands):
+        """
+        Check validity of inputted ligands (sdf).
+
+        Parameters
+        ==========
+        ligands : str
+            Name of the csv file with SMILES and id.
+        """
 
         if (ligands.split('.')[-1] != 'sdf') or (ligands.split('.')[-1] != 'sd'):
             pass
@@ -25,6 +103,15 @@ class DockingJob:
                 'LigandsFileError: The ligands file shoud be the output from ligprep in sdf format.')
 
     def _folderPreparation(self):
+        """
+        Prepare docking folder and job folder to be sent
+        to calculate.
+
+        Parameters
+        ==========
+        ligands : str
+            Name of the csv file with SMILES and id.
+        """
 
         if not os.path.isdir('3_docking_job'):
             os.mkdir('3_docking_job')
@@ -33,6 +120,17 @@ class DockingJob:
             os.mkdir('3_docking_job/job')
 
     def _glidePrepareJob(self, grid_file, forcefield):
+        """
+        Copy files to job folder and generate necessary .in file 
+        to perform Glide simulation.
+
+        Parameters
+        ==========
+        grid_file : str
+            Name of the grid file (.zip) to dock ligands.
+        forcefield : str
+            Name of the forcefield to be used in the Glide docking.
+        """
 
         shutil.copy(grid_file, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
@@ -49,6 +147,14 @@ class DockingJob:
             grid=grid_file, ff=forcefield))
 
     def _rdockReceptorFormatChecker(self, receptor):
+        """
+        Check receptor's format and transform it if necessary to mol2.
+
+        Parameters
+        ==========
+        receptor : str
+            File name of the receptor.
+        """
 
         if len(receptor.split('.')) == 2:
             receptor_name, receptor_format = receptor.split('.')
@@ -70,12 +176,34 @@ class DockingJob:
             pass
 
     def _rdockFileCopier(self, reference_ligand):
+        """
+        Copy files to job folder.
+
+        Parameters
+        ==========
+        reference_ligand : str
+            File name of the ligand used to generate cavity 
+            and grid for rDock.
+        """
+
         shutil.copy(reference_ligand, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
         shutil.copy('1_input_files/receptor/' +
                     self.receptor, '3_docking_job/job')
 
     def _rdockParamFilesWriter(self, receptor, reference_ligand):
+        """
+        Writinf param file to run rDock simulations and cavity 
+        generation.
+
+        Parameters
+        ==========
+        receptor : str
+            File name of the receptor.
+        reference_ligand : str
+            File name of the ligand used to generate cavity 
+            and grid for rDock.
+        """
 
         print(' - Using {} as reference ligand to generated cavity and grid.'.format(reference_ligand))
 
@@ -114,6 +242,9 @@ class DockingJob:
                     'END_SECTION\n')
 
     def _rdockGridGenerator(self):
+        """
+        Generate run file to generate cavity and grid for rDock.
+        """
 
         if not os.path.isdir('3_docking_job/job/runs'):
             os.mkdir('3_docking_job/job/runs')
@@ -124,6 +255,17 @@ class DockingJob:
             )
 
     def _rdockJobSplitter(self, ligands, cpus_docking):
+        """
+        Generate script and run files to split the sdf with N
+        molecules between M cpus.
+
+        Parameters
+        ==========
+        ligands : str
+            Name of the outputted ligands by ligprep.
+        cpus_docking : int
+            Number of cpus to use for the rDock docking.
+        """
 
         print(' - Splitting {ligands_file}\'s molecules into {cpus} different files.'.format(
             ligands_file=ligands, cpus=cpus_docking))
@@ -157,6 +299,17 @@ class DockingJob:
             )
 
     def _rdockRunFilesGenerator(self, cpus_docking):
+        """
+        Generate all the necessary runs to run an individual
+        rDock simulation, to prepare the rDock simulation, and 
+        to run all the individual simulations. 
+
+        Parameters
+        ==========
+        reference_ligand : str
+            File name of the ligand used to generate cavity 
+            and grid for rDock.
+        """
 
         # Generating folders
         if not os.path.isdir('3_docking_job/job/ligands'):
@@ -209,6 +362,14 @@ class DockingJob:
         print(' - RDock docking job generated successfully to run with {} cpus.'.format(cpus_docking))
 
     def _equibindReceptorFormatChecker(self, receptor):
+        """
+        Check receptor's format and transform it if necessary to pdb. 
+
+        Parameters
+        ==========
+        receptor : str
+            File name of the receptor.
+        """
 
         if len(receptor.split('.')) == 2:
             receptor_name, receptor_format = receptor.split('.')
@@ -230,6 +391,15 @@ class DockingJob:
             shutil.copy('1_input_files/receptor/' + receptor, '3_docking_job')
 
     def _equibindSplitLigands(self, ligands):
+        """
+        Split ligprep's output sdf into individual molecules to 
+        perform an equibind docking on all of them.
+
+        Parameters
+        ==========
+        ligands : str
+            File name of the ligprep's output.
+        """
 
         with open('2_ligprep_job/job/{}'.format(ligands), 'r') as f:
             content = f.read().strip()
@@ -265,6 +435,15 @@ class DockingJob:
                         f.write(record + '$$$$')
 
     def _equibindFolderPreparation(self, receptor):
+        """
+        Prepare the folders to send an equibind docking job.
+
+        Parameters
+        ==========
+        receptor : str
+            File name of the receptor.
+        """
+
         for folder in os.listdir('3_docking_job/job/equibind_calculations'):
             folder_path = os.path.join(
                 '3_docking_job/job/equibind_calculations', folder)
@@ -281,6 +460,10 @@ class DockingJob:
                     name=folder), destination_ligands)
 
     def _equibindFilesPreparation(self):
+        """
+        Write run file as well as inference.yml to be able to
+        send an equibind docking job.
+        """
 
         with open('3_docking_job/job/run', 'w') as fileout:
             fileout.writelines(
@@ -322,6 +505,18 @@ class DockingJob:
         print(' - Equibind docking job created successfully.')
 
     def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
+        """
+        Prepare the job folder to send a Glide docking job.
+
+        Parameters
+        ==========
+        Parameters
+        ==========
+        grid_file : str
+            Name of the grid file (.zip) to dock ligands.
+        forcefield : str
+            Name of the forcefield to be used in the Glide docking.
+        """
 
         self.grid_file = grid_file
         self.docking_tool = 'glide'
@@ -329,6 +524,19 @@ class DockingJob:
         self._glidePrepareJob(grid_file, forcefield)
 
     def setRdockDocking(self, reference_ligand, ligands, cpus_docking):
+        """
+        Prepare the job folder to send an rDock docking job.
+
+        Parameters
+        ==========
+        reference_ligand : str
+            File name of the ligand used to generate cavity 
+            and grid for rDock.
+        ligands : str
+            Name of the outputted ligands by ligprep.
+        cpus_docking : int
+            Number of cpus to use for the rDock docking.
+        """
 
         self.reference_ligand = reference_ligand
         self.docking_tool = 'rdock'
@@ -341,6 +549,16 @@ class DockingJob:
         self._rdockRunFilesGenerator(cpus_docking)
 
     def setEquibindDocking(self, ligands, receptor):
+        """
+        Prepare the job folder to send an Equibind docking job.
+
+        Parameters
+        ==========
+        ligands : str
+            Name of the outputted ligands by ligprep.
+        receptor : str
+            File name of the receptor.
+        """
 
         self.docking_tool = 'equibind'
 
