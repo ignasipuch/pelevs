@@ -51,7 +51,7 @@ class DockingJob:
             
         if not os.path.isfile(parameter_file):
             with open(parameter_file, 'w') as fileout:
-                fileout.writelines(
+                fileout.writelines(   
                 'RBT_PARAMETER_FILE_V1.00\n'
                 'TITLE rdock\n'
                 '\n'
@@ -81,15 +81,94 @@ class DockingJob:
                 'END_SECTION\n')
                 
     def _rdockGridGenerator(self):
+        
+        if not os.path.isdir('3_docking_job/job/runs'):
+            os.mkdir('3_docking_job/job/runs')       
 
-        with open('3_docking_job/job/run_grid.sh', 'w') as fileout:
+        with open('3_docking_job/job/runs/grid.sh', 'w') as fileout:
             fileout.writelines(
                 'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
             )   
             
-    def _rdockJobSplitter(self):
-        pass
-           
+    def _rdockJobSplitter(self, ligands, cpus_docking):
+        
+        # Generating split file 
+        if not os.path.isfile('3_docking_job/job/splitMols.sh'):
+            with open ('3_docking_job/job/splitMols.sh', 'w') as filein:
+                filein.writelines(
+                '#!/bin/bash\n'
+                '#Usage: splitMols.sh <input> #Nfiles <outputRoot>\n'
+                'module load rdock\n'
+                'fname=$1\n'
+                'nfiles=$2\n'
+                'output=$3\n'
+                'molnum=$(grep -c \'$$$$\' $fname)\n'
+                'echo " - $molnum molecules found"\n'
+                'echo " - Dividing \'$fname\' into $nfiles files"\n'
+                'rawstep=`echo $molnum/$nfiles | bc -l`\n'
+                'let step=$molnum/$nfiles\n'
+                'if [ ! `echo $rawstep%1 | bc` == 0 ]; then\n'
+                '        let step=$step+1;\n'
+                'fi;\n'
+                'sdsplit -$step -o$output $1\n'    
+                )
+
+                
+        # Generating splitted ligand files    
+        with open('3_docking_job/job/runs/split.sh', 'w') as fileout:
+            fileout.writelines(
+                '../splitMols.sh ../{ligands_file} {cpus} ../ligands\n'.format(ligands_file=ligands, cpus=cpus_docking)
+            ) 
+            
+    def _rdockRunFilesGenerator(self, cpus_docking):
+        
+        # Generating folders 
+        if not os.path.isdir('3_docking_job/job/ligands'):
+            os.mkdir('3_docking_job/job/ligands')
+            
+        if not os.path.isdir('3_docking_job/job/results'):
+            os.mkdir('3_docking_job/job/results')
+    
+        # Generating run files
+        for i in range(1,cpus_docking+1):
+            with open('3_docking_job/job/runs/run{}'.format(i),'w') as fileout:
+                fileout.writelines([
+                '#!/bin/sh\n',
+                '#SBATCH --job-name=rdock' + str(i) + ' \n',
+                '#SBATCH --time=01:00:00\n',
+                '#SBATCH --ntasks=1\n',
+                '#SBATCH --output=rdock.out\n',
+                '#SBATCH --error=rdock.err\n',
+                '\n',
+                'module load rdock\n',
+                'module load ANACONDA/2019.10\n',
+                'module load intel\n',
+                'module load mkl\n',
+                'module load impi\n',
+                'module load gcc\n',
+                'module load boost/1.64.0\n',
+                '\n',
+                '\n',
+                'rbdock -i ../ligands/split{val}.sd -o ../results/split{val}_out -r ../parameter_file.prm -p dock.prm -n 50\n'.format(val=i),
+                'done\n'
+                ])
+                
+        with open('3_docking_job/job/run_prepare_rDock.sh','w') as fileout:
+            fileout.writelines(
+                '#!/bin/bash\n'
+                '# Run runs/run_grid.sh\n'
+                'source runs/run_grid.sh\n'
+                '\n'
+                '# Run runs/run_split.sh\n'
+                'source runs/run_split.sh\n'       
+            )
+            
+        with open('3_docking_job/job/run_rDock.sh','w') as fileout:
+            fileout.writelines(
+                '#!/bin/bash\n'
+                'for d in run*; do echo ${d}; sbatch ${d}; done'   
+            )
+            
     def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
         
         self.grid_file = grid_file
@@ -107,8 +186,8 @@ class DockingJob:
             ])
             
         print(' - Glide job generated succesfully.')
-                             
-    def setRdockDocking(self, reference_ligand):
+                          
+    def setRdockDocking(self, reference_ligand, ligands, cpus_docking):
                    
         self.reference_ligand = reference_ligand
         self.docking_tool = 'rdock'
@@ -121,3 +200,5 @@ class DockingJob:
         
         self._paramFilesWriter(self.receptor, self.reference_ligand)
         self._rdockGridGenerator()
+        self._rdockJobSplitter(ligands,cpus_docking)
+        self._rdockRunFilesGenerator(cpus_docking)
