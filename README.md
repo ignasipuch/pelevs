@@ -5,9 +5,14 @@ Repository to create a concrete workflow to work with in drug discovery projects
 
 ## Workflow
 
-Target
-            --------->             --------->  Docking  --------->  tPELE  ---------> Analysis
-Inhibitors               LigPrep
+```mermaid
+graph LR
+A[Inhibitors] --> B[LigPrep]
+B --> C[Docking]
+D[Target] --> C[Docking]
+C -- Best poses --> E[tPELE]
+E --> F[Analysis]
+```
     
 ### Input
 
