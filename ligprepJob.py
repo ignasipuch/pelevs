@@ -4,26 +4,15 @@ import pandas as pd
 
 class LigPrepJob:
     
-    def __init__(self, receptor, ligands, docking_tool, sampling, cpus_docking):
+    def __init__(self, receptor, ligands):
         self.receptor = receptor
         self.ligands = ligands
-        self.docking_tool = docking_tool
-        self.sampling = sampling
         self.receptor_format = None
-
-        if docking_tool == 'rdock':
-            self.cpus_docking = cpus_docking
-        elif docking_tool == 'glide':
-            self.cpus_docking = None
-        elif docking_tool == 'equibind':
-            self.cpus_docking = 40
-        else:
-            raise Exception('DockingToolError: It is only supported: glide, rdock or equibind.')
             
-        self.filesChecker(receptor, ligands)
-        self.prepareFolders(receptor, ligands, docking_tool)
+        self._filesChecker(receptor, ligands)
+        self._prepareFolders(receptor, ligands)
 
-    def filesChecker(self, receptor, ligands):
+    def _filesChecker(self, receptor, ligands):
         
         ligands_format = ligands.split('.')[-1]
             
@@ -44,17 +33,22 @@ class LigPrepJob:
         else:
             raise Exception('FormatLigandsError: The format of the ligand files is not supported')
           
-    def prepareFolders(self, receptor, ligands, docking_tool):
+    def _prepareFolders(self, receptor, ligands):
         
         if not os.path.isdir('1_input_files'):
             os.mkdir('1_input_files')
             
+        if not os.path.isdir('1_input_files/receptor'):
+            os.mkdir('1_input_files/receptor')
+        if not os.path.isdir('1_input_files/ligands'):
+            os.mkdir('1_input_files/ligands')
+            
         if not os.path.isdir('2_ligprep_job'):
             os.mkdir('2_ligprep_job')
 
-        shutil.move(receptor, os.path.join('1_input_files', receptor))
-        shutil.move(ligands, os.path.join('1_input_files', ligands))
-               
+        shutil.move(receptor, os.path.join('1_input_files/receptor', receptor))
+        shutil.move(ligands, os.path.join('1_input_files/ligands', ligands))
+             
     def ligPrepJob(self, ligands_input, ligands_output, pH=7., pH_tolerance=2., conformations=4):
         
         if not os.path.isdir('2_ligprep_job/job'):
