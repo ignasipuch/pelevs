@@ -28,7 +28,6 @@ class LigPrepJob:
         
         if (receptor_file_format == 'pdb') or (receptor_file_format == 'sd') or (receptor_file_format == 'sdf') or (receptor_file_format == 'mol2'):
                 self.receptor_format = receptor_file_format
-                check = True
                 print(' -     The receptor is a(n) {} file.'.format(self.receptor_format))
         else:
             raise Exception('FormatLigandsError: The format of the ligand files is not supported')
