@@ -134,6 +134,11 @@ class DockingJob:
 
         shutil.copy(grid_file, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
+        
+        with open('3_docking_job/job/glide_job.sh', 'w') as filein:
+            filein.writelines(
+                '"$\{SCHRODINGER\}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
+            )
 
         with open('3_docking_job/job/glide_job.in', 'w') as filein:
             filein.writelines([
