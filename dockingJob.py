@@ -64,7 +64,7 @@ class DockingJob:
         Writing necessary inference.yml and run files.
     """
 
-    def __init__(self, receptor='1_input_files/receptor/' + os.listdir('1_input_files/receptor/')[0], ligands='2_ligprep_job/job/' + [x for x in os.listdir('2_ligprep_job/job/') if x.endswith('.sdf')][0]):
+    def __init__(self, receptor, ligands):
         """
         Prepare files and folders coming from the liprep job in a 
         directory to perform  acertain kind of docking.
@@ -76,6 +76,13 @@ class DockingJob:
         ligands : str
             Name of the csv file with SMILES and id.
         """
+        
+        if not receptor and not ligands:
+            if os.isdir('1_input_files/receptor/'):
+                receptor = '1_input_files/receptor/' + os.listdir('1_input_files/receptor/')[0]
+                
+            if os.isdir('2_ligprep_job/job/'):
+                ligands = '2_ligprep_job/job/' + [x for x in os.listdir('2_ligprep_job/job/') if x.endswith('.sdf')][0]
 
         self.receptor = receptor.split('/')[-1]
         self.ligands = ligands.split('/')[-1]
@@ -137,7 +144,7 @@ class DockingJob:
         
         with open('3_docking_job/job/glide_job.sh', 'w') as filein:
             filein.writelines(
-                '"$\{SCHRODINGER\}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
+                '"${SCHRODINGER}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
             )
 
         with open('3_docking_job/job/glide_job.in', 'w') as filein:
@@ -570,4 +577,4 @@ class DockingJob:
         self._equibindReceptorFormatChecker(receptor)
         self._equibindSplitLigands(ligands)
         self._equibindFolderPreparation(receptor)
-        self._equibindFilesPreparation()
+        self._equibindFilesPreparation()  
