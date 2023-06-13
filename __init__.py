@@ -1,2 +1,2 @@
-from .ligprepJob import LigPrepJob
+from .inputPrepare import InputPreparation
 from .dockingJob import DockingJob
