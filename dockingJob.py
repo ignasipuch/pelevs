@@ -64,7 +64,7 @@ class DockingJob:
         Writing necessary inference.yml and run files.
     """
 
-    def __init__(self, receptor, ligands):
+    def __init__(self):
         """
         Prepare files and folders coming from the liprep job in a 
         directory to perform  acertain kind of docking.
@@ -77,12 +77,15 @@ class DockingJob:
             Name of the csv file with SMILES and id.
         """
         
-        if not receptor and not ligands:
-            if os.isdir('1_input_files/receptor/'):
-                receptor = '1_input_files/receptor/' + os.listdir('1_input_files/receptor/')[0]
-                
-            if os.isdir('2_ligprep_job/job/'):
-                ligands = '2_ligprep_job/job/' + [x for x in os.listdir('2_ligprep_job/job/') if x.endswith('.sdf')][0]
+        if os.path.isdir('1_input_files/receptor/'):
+            receptor = '1_input_files/receptor/' + os.listdir('1_input_files/receptor/')[0]
+        else:
+            raise Exception('MissingReceptorFile: Receptor file should be located at \'1_input_files/receptor/\'')
+
+        if os.path.isdir('2_ligprep_job/job/'):
+            ligands = '2_ligprep_job/job/' + [x for x in os.listdir('2_ligprep_job/job/') if x.endswith('.sdf')][0]
+        else:
+            raise Exception('MissingLigandsFile: Ligands file should be located at \'2_ligprep_job/job/\'')
 
         self.receptor = receptor.split('/')[-1]
         self.ligands = ligands.split('/')[-1]
@@ -228,7 +231,7 @@ class DockingJob:
                     'RBT_PARAMETER_FILE_V1.00\n'
                     'TITLE rdock\n'
                     '\n'
-                    'RECEPTOR_FILE ' + receptor + '\n'
+                    'RECEPTOR_FILE ' + receptor.split('.pdb')[0] + '.mol2' + '\n'
                     'RECEPTOR_FLEX 3.0\n'
                     '\n'
                     '##################################################################\n'
@@ -258,11 +261,9 @@ class DockingJob:
         Generate run file to generate cavity and grid for rDock.
         """
 
-        if not os.path.isdir('3_docking_job/job/runs'):
-            os.mkdir('3_docking_job/job/runs')
-
-        with open('3_docking_job/job/runs/grid.sh', 'w') as fileout:
+        with open('3_docking_job/job/grid.sh', 'w') as fileout:
             fileout.writelines(
+                'module load rdock\n'
                 'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
             )
 
@@ -304,9 +305,10 @@ class DockingJob:
                 )
 
         # Generating splitted ligand files
-        with open('3_docking_job/job/runs/split.sh', 'w') as fileout:
+        with open('3_docking_job/job/split.sh', 'w') as fileout:
             fileout.writelines(
-                '../splitMols.sh ../{ligands_file} {cpus} ../ligands\n'.format(
+                'module load rdock\n'
+                'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
                     ligands_file=ligands, cpus=cpus_docking)
             )
 
@@ -332,7 +334,7 @@ class DockingJob:
 
         # Generating run files
         for i in range(1, cpus_docking+1):
-            with open('3_docking_job/job/runs/run{}'.format(i), 'w') as fileout:
+            with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
                 fileout.writelines([
                     '#!/bin/sh\n',
                     '#SBATCH --job-name=rdock' + str(i) + ' \n',
@@ -350,27 +352,29 @@ class DockingJob:
                     'module load boost/1.64.0\n',
                     '\n',
                     '\n',
-                    'rbdock -i ../ligands/split{val}.sd -o ../results/split{val}_out -r ../parameter_file.prm -p dock.prm -n 50\n'.format(
-                        val=i),
-                    'done\n'
+                    'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50\n'.format(
+                        val=i)
                 ])
 
-        with open('3_docking_job/job/run_prepare_rDock.sh', 'w') as fileout:
+        with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
             fileout.writelines(
                 '#!/bin/bash\n'
-                '# Run runs/run_grid.sh\n'
-                'source runs/run_grid.sh\n'
+                '# Run grid.sh\n'
+                'echo \' - Generating grid and cavity\'\n'
+                'source grid.sh\n'
                 '\n'
-                '# Run runs/run_split.sh\n'
-                'source runs/run_split.sh\n'
+                '# Run split.sh\n'
+                'echo \' - Splitting ligands\'\n'
+                'source split.sh\n'
             )
 
-        with open('3_docking_job/job/run_rDock.sh', 'w') as fileout:
+        with open('3_docking_job/job/rDock_run.sh', 'w') as fileout:
             fileout.writelines(
                 '#!/bin/bash\n'
                 'for d in run*; do echo ${d}; sbatch ${d}; done'
             )
 
+        print(' - Job generated to be sent to MN4 machine.')
         print(' - RDock docking job generated successfully to run with {} cpus.'.format(cpus_docking))
 
     def _equibindReceptorFormatChecker(self, receptor):
@@ -444,6 +448,9 @@ class DockingJob:
 
                     # Write the record to the output file
                     with open('3_docking_job/job/equibind_calculations/{folder}/{output}'.format(folder=variant_value, output=output_file), 'w') as f:
+                        if record.startswith('\n'):
+                            record = record[1:]
+
                         f.write(record + '$$$$')
 
     def _equibindFolderPreparation(self, receptor):
@@ -495,7 +502,7 @@ class DockingJob:
                 'eval "$(conda shell.bash hook)"\n'
                 'conda activate /apps/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock\n'
                 '\n'
-                'cp -r /gpfs/apps/POWER9/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock/modules/EquiBind/runs .'
+                'cp -r /gpfs/apps/POWER9/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock/modules/EquiBind/runs .\n'
                 'python /gpfs/apps/POWER9/ANACONDA3/2020.02/envs/ESM-EquiBind-DiffDock/modules/EquiBind/inference.py --config=inference.yml\n'
             )
 
@@ -514,6 +521,7 @@ class DockingJob:
                 'num_confs: 1 # usually this should be 1\n'
             )
 
+        print(' - Job created to be sent to CTE-POWER') 
         print(' - Equibind docking job created successfully.')
 
     def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
