@@ -450,7 +450,7 @@ class DockingJob:
                     with open('3_docking_job/job/equibind_calculations/{folder}/{output}'.format(folder=variant_value, output=output_file), 'w') as f:
                         if record.startswith('\n'):
                             record = record[1:]
-
+                            
                         f.write(record + '$$$$')
 
     def _equibindFolderPreparation(self, receptor):
