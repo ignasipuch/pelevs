@@ -207,10 +207,7 @@ class DockingAnalyzer:
         print(' - Correlation image generated succesfully')
         print(' - Image stored at 3_docking_job/images\n')
 
-    def glideTimeAnalyisis(self):
-        pass
-
-    def glideEnergyAnalysis(self,experimental_data, column_name):
+    def glideAnalysis(self,experimental_data, column_name):
         
         self._glideDockingResultsChecker()
         self._glideDataFrameRetriever()
