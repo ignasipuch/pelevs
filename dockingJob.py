@@ -155,6 +155,8 @@ class DockingJob:
                 'FORCEFIELD   {}\n'.format(forcefield),
                 'GRIDFILE   {}\n'.format(grid_file),
                 'LIGANDFILE   {}\n'.format(self.ligands),
+                'POSES_PER_LIG   50\n',
+                'POSTDOCK_NPOSE   50\n',
                 'PRECISION   SP\n'
             ])
 
