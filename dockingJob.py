@@ -142,7 +142,7 @@ class DockingJob:
             Name of the forcefield to be used in the Glide docking.
         """
 
-        shutil.copy(grid_file, '3_docking_job/job')
+        shutil.move(grid_file, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
         
         with open('3_docking_job/job/glide_job.sh', 'w') as filein:
@@ -203,7 +203,8 @@ class DockingJob:
             and grid for rDock.
         """
 
-        shutil.copy(reference_ligand, '3_docking_job/job')
+        shutil.copy(reference_ligand, '1_input_files/ligands')
+        shutil.move(reference_ligand, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
         shutil.copy('1_input_files/receptor/' +
                     self.receptor, '3_docking_job/job')
