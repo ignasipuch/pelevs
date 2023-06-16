@@ -76,16 +76,21 @@ class DockingJob:
         ligands : str
             Name of the csv file with SMILES and id.
         """
-        
+
         if os.path.isdir('1_input_files/receptor/'):
-            receptor = '1_input_files/receptor/' + os.listdir('1_input_files/receptor/')[0]
+            receptor = '1_input_files/receptor/' + \
+                os.listdir('1_input_files/receptor/')[0]
         else:
-            raise Exception('MissingReceptorFile: Receptor file should be located at \'1_input_files/receptor/\'')
+            raise Exception(
+                'MissingReceptorFile: Receptor file should be located at \'1_input_files/receptor/\'')
 
         if os.path.isdir('2_ligprep_job/job/'):
-            ligands = '2_ligprep_job/job/' + [x for x in os.listdir('2_ligprep_job/job/') if x.endswith('.sdf')][0]
+            ligands = '2_ligprep_job/job/' + \
+                [x for x in os.listdir('2_ligprep_job/job/')
+                 if x.endswith('.sdf')][0]
         else:
-            raise Exception('MissingLigandsFile: Ligands file should be located at \'2_ligprep_job/job/\'')
+            raise Exception(
+                'MissingLigandsFile: Ligands file should be located at \'2_ligprep_job/job/\'')
 
         self.receptor = receptor.split('/')[-1]
         self.ligands = ligands.split('/')[-1]
@@ -144,7 +149,7 @@ class DockingJob:
 
         shutil.move(grid_file, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
-        
+
         with open('3_docking_job/job/glide_job.sh', 'w') as filein:
             filein.writelines(
                 '"${SCHRODINGER}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
@@ -234,7 +239,8 @@ class DockingJob:
                     'RBT_PARAMETER_FILE_V1.00\n'
                     'TITLE rdock\n'
                     '\n'
-                    'RECEPTOR_FILE ' + receptor.split('.pdb')[0] + '.mol2' + '\n'
+                    'RECEPTOR_FILE ' +
+                    receptor.split('.pdb')[0] + '.mol2' + '\n'
                     'RECEPTOR_FLEX 3.0\n'
                     '\n'
                     '##################################################################\n'
@@ -453,7 +459,7 @@ class DockingJob:
                     with open('3_docking_job/job/equibind_calculations/{folder}/{output}'.format(folder=variant_value, output=output_file), 'w') as f:
                         if record.startswith('\n'):
                             record = record[1:]
-                            
+
                         f.write(record + '$$$$')
 
     def _equibindFolderPreparation(self, receptor):
@@ -524,7 +530,7 @@ class DockingJob:
                 'num_confs: 1 # usually this should be 1\n'
             )
 
-        print(' - Job created to be sent to CTE-POWER') 
+        print(' - Job created to be sent to CTE-POWER')
         print(' - Equibind docking job created successfully.')
 
     def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
@@ -588,4 +594,4 @@ class DockingJob:
         self._equibindReceptorFormatChecker(receptor)
         self._equibindSplitLigands(ligands)
         self._equibindFolderPreparation(receptor)
-        self._equibindFilesPreparation()  
+        self._equibindFilesPreparation()
