@@ -97,14 +97,29 @@ class DockingAnalyzer:
         z_x = (x - np.mean(x)) / np.std(x)
         z_y = (y - np.mean(y)) / np.std(y)
 
-        m, n, r, p, _ = linregress(z_x,z_y)
+        m_z, n_z, r_z, p_z, _ = linregress(z_x,z_y)
+
+        plt.figure()
         plt.scatter(z_x,z_y)
 
         # Set labels and title
         plt.xlabel('Z score experimental')
         plt.ylabel('Z score calculated')
         plt.title('{} Z-score correlation'.format(docking_method))
-        plt.plot(z_x,m*np.array(z_x) + n, color='orange',label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
+        plt.plot(z_x,m_z*np.array(z_x) + n_z, color='orange',label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_z, p_z, len(x)))
+        plt.legend(loc='best')
+        plt.savefig('3_docking_job/images/{}_zscore_correlation.png'.format(docking_method), format='png')
+
+        m, n, r, p, _ = linregress(x,y)
+
+        plt.figure()
+        plt.scatter(x,y)
+
+        # Set labels and title
+        plt.xlabel('Experimental')
+        plt.ylabel('Calculated')
+        plt.title('{} correlation'.format(docking_method))
+        plt.plot(x,m*np.array(x) + n, color='orange',label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
         plt.legend(loc='best')
         plt.savefig('3_docking_job/images/{}_correlation.png'.format(docking_method), format='png')
 
@@ -124,23 +139,23 @@ class DockingAnalyzer:
         
     def _glideDataFrameRetriever(self):
         """
-        Retrieves the data frame generated with the Glide docking. 
-        It aldo modifies certain columns and values to end up
+        Retrieves the data frame generated with the Glide docking.
+        It also modifies certain columns and values to end up
         having a dataframe with the values that we are interested
-        in such as SMILES, name of the ligand, ligand number, 
+        in such as SMILES, name of the ligand, ligand number,
         time, and score. It also stores only the best conformation
-        per ligand to retrieve the original number of ligands of 
+        per ligand to retrieve the original number of ligands of
         the dataset (since ligprep generates conformers).
         """
 
         path_docking = '3_docking_job/job'
-        path_results = os.path.join(path_docking,[x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
+        path_results = os.path.join(path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
 
         # Keeping important columns
         df_og = pd.read_csv(path_results)
-        columns_to_keep = ['SMILES','title','i_i_glide_lignum','r_glide_cpu_time','r_i_glide_gscore']
-        df = df_og[columns_to_keep]
-        
+        columns_to_keep = ['SMILES', 'title', 'i_i_glide_lignum', 'r_glide_cpu_time', 'r_i_glide_gscore']
+        df = df_og[columns_to_keep].copy()
+
         # Adding molecule number to the dataframe
         prev_title = None
         prev_value = None
@@ -154,11 +169,15 @@ class DockingAnalyzer:
 
         df.insert(2, 'conformation', modified_i_i_glide_lignum + 1)
 
+        df.to_csv('3_docking_job/Glide_whole_dataset.csv')
+
         # Sorting by energies and keeping only one per molecule
-        df.sort_values(by="r_i_glide_gscore", inplace=True)    
+        df.sort_values(by="r_i_glide_gscore", inplace=True)
         df.drop_duplicates(subset="title", keep="first", inplace=True)
         df.sort_values(by="title", inplace=True)
         df.reset_index(drop=True, inplace=True)
+
+        df.to_csv('3_docking_job/Glide_dataset.csv')
 
         print(' - Csv information imported and sorted (self.calculated_data)')
 
@@ -177,16 +196,18 @@ class DockingAnalyzer:
         column_name : str
             Name of the column where the data in the csv is stored.
         """
+
+        file_name = experimental_data.split('/')[-1]
     
         # Move experimental data to input data
         if not os.path.isdir('1_input_files/experimental_energies'):
             os.mkdir('1_input_files/experimental_energies')
-            
-        file_name = experimental_data.split('/')[-1]
-        shutil.move(file_name, '1_input_files/experimental_energies/')
+            shutil.move(file_name, '1_input_files/experimental_energies/')                    
         
         df_experimental = pd.read_csv(os.path.join('1_input_files/experimental_energies/', file_name), index_col=0)
         df_calculated = self.calculated_data
+
+        self.experimental_data = df_experimental
 
         x = df_experimental[column_name].to_numpy()
         y = df_calculated.r_i_glide_gscore.to_numpy() 
@@ -204,6 +225,7 @@ class DockingAnalyzer:
         
         df = self.calculated_data
 
+        plt.figure()
         plt.hist(df['r_glide_cpu_time'], bins=10, alpha=0.3, color='blue', density=True)
 
         kde = sns.kdeplot(df['r_glide_cpu_time'], color='red')
@@ -311,15 +333,17 @@ class DockingAnalyzer:
             Name of the column where the data in the csv is stored.
         """
 
+        file_name = experimental_data.split('/')[-1]
+
         # Move experimental data to input data
         if not os.path.isdir('1_input_files/experimental_energies'):
             os.mkdir('1_input_files/experimental_energies')
-            
-        file_name = experimental_data.split('/')[-1]
-        shutil.move(file_name, '1_input_files/experimental_energies/')
+            shutil.move(file_name, '1_input_files/experimental_energies/')
         
         df_experimental = pd.read_csv(os.path.join('1_input_files/experimental_energies/', file_name), index_col=0)
         df_calculated = self.calculated_data
+
+        self.experimental_data = df_experimental
 
         x = df_experimental[column_name].to_numpy()
         y = df_calculated.rdock_score.to_numpy() 
