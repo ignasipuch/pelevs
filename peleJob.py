@@ -67,7 +67,7 @@ class PELE:
             print(' - Perturbation protocol chosen : {}.'.format(perturbation_protocol))
             perturbation_list = [True, perturbation_protocol]
 
-        print(' - Sampling chosen : {}.'.format(rescoring_method))
+        print(' - Sampling chosen: {}.'.format(rescoring_method))
         rescoring_method_list = [True, rescoring_method]
 
         return forcefield_list, truncated_list, perturbation_list, rescoring_method_list
@@ -103,7 +103,8 @@ class PELE:
             shutil.move(directory_path, pele_simulation_path)
         elif not os.path.isdir(os.path.join(pele_simulation_path, directory)):
             shutil.move(path, pele_directory_path)
-            shutil.rmtree(directory_path)
+            if directory_path != path:
+                shutil.rmtree(directory_path)
 
         print(' - Jobs will be stored at: {}'.format(os.path.join(pele_simulation_path, directory)))
 
@@ -150,7 +151,7 @@ class PELE:
         if path_to_retrieve is not None:
             print(' - Previous simulation job found at: {}'.format(path_to_retrieve))
             print(' - Copying pdb files from: {}'.format(path_to_retrieve))
-            
+
             for ligand in os.listdir(path_to_retrieve):
                 file = os.path.join(path_to_retrieve, ligand, ligand + '.pdb')
                 path_to_ligand = os.path.join(path_simulation,ligand)
