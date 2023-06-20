@@ -105,6 +105,8 @@ class PELE:
             shutil.move(path, pele_directory_path)
             shutil.rmtree(directory_path)
 
+        print(' - Jobs will be stored at: {}'.format(os.path.join(pele_simulation_path, directory)))
+
         return os.path.join(pele_simulation_path, directory)
 
     def _PELEJobChecker(self, forcefield_list, truncated_list, perturbation_protocol_list, rescoring_method_list):
@@ -146,6 +148,9 @@ class PELE:
 
         # Copies files if there are files to copy
         if path_to_retrieve is not None:
+            print(' - Previous simulation job found at: {}'.format(path_to_retrieve))
+            print(' - Copying pdb files from: {}'.format(path_to_retrieve))
+            
             for ligand in os.listdir(path_to_retrieve):
                 file = os.path.join(path_to_retrieve, ligand, ligand + '.pdb')
                 path_to_ligand = os.path.join(path_simulation,ligand)
