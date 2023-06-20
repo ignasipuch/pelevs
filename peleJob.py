@@ -44,6 +44,27 @@ class PELE:
         if not os.path.isdir('4_pele_simulation/pele_simulation'):
             os.mkdir('4_pele_simulation/pele_simulation')
 
+    def _folderHierarchy(self, force_field, truncated, perturbation_protocol, rescoring_method):
+
+        if force_field is None:
+            force_field = 'opls'
+            forcefield_list = [False, force_field]
+        else: forcefield_list = [True, force_field]
+
+        if truncated is None:
+            truncated = 'truncated'
+            truncated_list = [False, truncated]
+        else: truncated_list = [True, truncated]
+
+        if perturbation_protocol is None:
+            perturbation_protocol = 'refinement'
+            perturbation_list = [False, perturbation_protocol]
+        else: perturbation_list = [True, perturbation_protocol]
+
+        rescoring_method_list = [True, rescoring_method]
+
+        return forcefield_list, truncated_list, perturbation_list, rescoring_method_list
+
     def _PDBConversor(self, file_in, path_out):
         """
         Converts the input file to PDB format using Open Babel.
@@ -175,7 +196,7 @@ class PELE:
    
         with open(os.path.join(path, 'input.yaml'), 'w') as fileout:
             fileout.writelines(
-                'complex_data: "' + pdb_file +'.pdb"\n'
+                'complex_data: "' + pdb_file + '"\n'
                 'complex_ligand_selection: "L:900"\n'
                 'static_name: false\n'
                 'name: "' + pdb_file + '"\n'
@@ -291,23 +312,17 @@ class PELE:
         for lst in lists:
             if lst[0] is True:
                 if cont == 1:
-                    directory_path = lst[1]
+                    directory_path = os.path.join(path, lst[1])
 
                 directory_name = lst[1]
                 new_directory = os.path.join(path, directory_name)
                 os.makedirs(new_directory, exist_ok=True)
                 path = new_directory
-                cont =+1
-
-        print('directories made')
+                cont += 1
         
         for item in os.listdir(pele_simulation_path):
             item_path = os.path.join(pele_simulation_path, item)
             shutil.move(item_path, path)
-
-        print('all moved to new directories')
-
-        print(directory_path, directory_name)
 
         # Move all to pele_simulation_path
         shutil.move(directory_path, pele_simulation_path)
@@ -384,23 +399,7 @@ class PELE:
     
     def setEquibindToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
 
-        if force_field is None:
-            force_field = 'opls'
-            forcefield_list = [False, force_field]
-        else: forcefield_list = [True, force_field]
-
-        if truncated is None:
-            truncated = 'truncated'
-            truncated_list = [False, truncated]
-        else: truncated_list = [True, truncated]
-
-        if perturbation_protocol is None:
-            perturbation_protocol = 'refinement'
-            perturbation_list = [False, perturbation_protocol]
-        else: perturbation_list = [True, perturbation_protocol]
-
-        rescoring_method_list = [True, rescoring_method]
-
+        forcefield_list, truncated_list, perturbation_list, rescoring_method_list = self._folderHierarchy(force_field, truncated, perturbation_protocol, rescoring_method)
         self._equibindDockingPoseRetriever()
         self._equibindPELEInputGenerator(rescoring_method, force_field, truncated, perturbation_protocol)
         self._PELEJobManager(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
