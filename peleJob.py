@@ -3,7 +3,7 @@ import shutil
 from openbabel import openbabel as ob
 from Bio.PDB import PDBParser, PDBIO
 import re
-from openbabel import pybel
+import pathlib
 
 class PELE:
     """
@@ -415,10 +415,26 @@ class PELE:
         previous_simulation_bool = self._PELEJobChecker(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
 
     def setGlideToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
+
+        def _glideDockingPoseRetriever(simulation_path):
+            # Generating paths
+            docked_jobs_maegz = '3_docking_job/job/glide_job_pv.maegz'
+            docked_jobs_destination = '4_pele_simulation/docking_input/ligands'
+            receptor_origin = '1_input_files/receptor' 
+            receptor_destination = '4_pele_simulation/docking_input/receptor'
+            pele_simulation_path = simulation_path
+
+            # Copying docked ligands and generating folders
+            if not os.path.isdir(docked_jobs_destination):
+                os.mkdir(docked_jobs_destination)
+
+            os.system('$SCHRODINGER/run python3 dockprotocol/scripts/glide_to_pdb.py -jn {}'.format('glide_job'))
+
         forcefield_list, truncated_list, perturbation_list, rescoring_method_list = self._folderHierarchy(force_field, truncated, perturbation_protocol, rescoring_method)
         simulation_path = self._PELEJobManager(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
         previous_simulation_bool = self._PELEJobChecker(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
-    
+        _glideDockingPoseRetriever(simulation_path)
+ 
     def setEquibindToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
 
         def _equibindDockingPoseRetriever(simulation_path):
