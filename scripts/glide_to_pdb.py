@@ -48,6 +48,14 @@ def glide_pdb(job_name):
         df_result = df_sorted.drop_duplicates(['title', 'i_i_glide_lignum'])
         sorted_df = df_result.sort_values(['title','i_i_glide_lignum'])
 
+        sorted_df.to_csv('3_docking_job/job/{}.csv'.format('best_scores_conformers'))
+
+        sorted_df = sorted_df.sort_values('r_i_glide_gscore')
+        sorted_df = sorted_df.drop_duplicates('title')
+        sorted_df = sorted_df.sort_values('title')
+
+        sorted_df.to_csv('3_docking_job/job/{}.csv'.format('best_scores_ligands'))
+
         indeces = []
         molecules = []
 
@@ -63,6 +71,7 @@ def glide_pdb(job_name):
     path_input = os.path.join(path, '3_docking_job/job/{}'.format(job_name + '.csv'))
     path_maegz = os.path.join(path, '3_docking_job/job/{}'.format(job_name + '_pv.maegz'))
     output_directory = '3_docking_job/job/output_pdb_files/'
+
     # Creating output directory
     if not os.path.isdir(output_directory):
         os.mkdir(output_directory)
