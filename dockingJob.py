@@ -298,13 +298,13 @@ class DockingJob:
                 filein.writelines(
                     '#!/bin/bash\n'
                     '#Usage: splitMols.sh <input> #Nfiles <outputRoot>\n'
-                    'module load rdock\n'
                     'fname=$1\n'
                     'nfiles=$2\n'
                     'output=$3\n'
                     'molnum=$(grep -c \'$$$$\' $fname)\n'
                     'echo " - $molnum molecules found"\n'
                     'echo " - Dividing \'$fname\' into $nfiles files"\n'
+                    'echo " "\n'
                     'rawstep=`echo $molnum/$nfiles | bc -l`\n'
                     'let step=$molnum/$nfiles\n'
                     'if [ ! `echo $rawstep%1 | bc` == 0 ]; then\n'
@@ -316,7 +316,6 @@ class DockingJob:
         # Generating splitted ligand files
         with open('3_docking_job/job/split.sh', 'w') as fileout:
             fileout.writelines(
-                'module load rdock\n'
                 'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
                     ligands_file=ligands, cpus=cpus_docking)
             )
@@ -368,10 +367,13 @@ class DockingJob:
         with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
             fileout.writelines(
                 '#!/bin/bash\n'
-                '# Run grid.sh\n'
+                '# Run grid.sh\n\n'
+                'echo \' \'\n'
                 'echo \' - Generating grid and cavity\'\n'
+                'echo \' - Loading rDock module:\'\n'
+                'echo \' \'\n'
                 'source grid.sh\n'
-                '\n'
+                'echo \' \'\n\n'
                 '# Run split.sh\n'
                 'echo \' - Splitting ligands\'\n'
                 'source split.sh\n'
@@ -385,6 +387,7 @@ class DockingJob:
 
         print(' - Job generated to be sent to MN4 machine.')
         print(' - RDock docking job generated successfully to run with {} cpus.'.format(cpus_docking))
+        print(' - Once in the MN4, first run: bash prepare_rDock_run and after that\n   run: bash rDock_run.sh')
 
     def _equibindReceptorFormatChecker(self, receptor):
         """
