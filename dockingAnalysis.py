@@ -316,7 +316,7 @@ class DockingAnalyzer:
         output_file = 'rDock_data.csv'
         with open(os.path.join(storage_path, output_file), 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['file_name', 'index', 'ligand',
+            writer.writerow(['file_name', 'file_entry', 'ligand',
                              'conformer', 'rdock_score'])
             writer.writerows(data)
 
@@ -335,7 +335,12 @@ class DockingAnalyzer:
         sorted_df = df.sort_values('rdock_score')
         unique_df = sorted_df.drop_duplicates('ligand')
         final_df = unique_df.sort_values('ligand')
-        final_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
+
+        desired_order = ['ligand', 'conformer', 'file_name', 'file_entry', 'rdock_score']
+
+        # Reorder the columns
+        save_df = final_df.reindex(columns=desired_order)
+        save_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
 
         print(' - Csv generated at 3_docking_job/rDock_best_poses.csv with best poses.')
 
