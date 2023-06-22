@@ -335,7 +335,7 @@ class DockingAnalyzer:
         sorted_df = df.sort_values('rdock_score')
         unique_df = sorted_df.drop_duplicates('ligand')
         final_df = unique_df.sort_values('ligand')
-        final_df.to_csv('3_docking_job/rDock_best_poses.csv')
+        final_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
 
         print(' - Csv generated at 3_docking_job/rDock_best_poses.csv with best poses.')
 
