@@ -625,21 +625,76 @@ class PELE:
 
             file_list = df['file_name'].tolist()
 
+            # Deleting ligands
+            for file_name in os.listdir(docked_jobs_origin):
+                file_path = os.path.join(docked_jobs_origin, file_name)
+                ligand_name = file_name.split('-')[0] + '.sdf'
+                new_ligand_path = os.path.join(docked_jobs_origin, ligand_name)
+
+                if file_name not in file_list:
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                else:
+                    os.rename(file_path,new_ligand_path)
+
             # Copying docked ligands and generating folders
             if not os.path.isdir(pele_simulation_path):
                 os.mkdir(pele_simulation_path)
 
-            for conformer in file_list:
-                ligand = conformer.split('-')[0]
+            for conformer in os.listdir(docked_jobs_origin):
+                ligand = conformer.split('.')[0]
                 if not os.path.isdir(os.path.join(pele_simulation_path,ligand)):
                     os.mkdir(os.path.join(pele_simulation_path,ligand))
 
-                shutil.copy(os.path.join(docked_jobs_origin,conformer), os.path.join(pele_simulation_path,ligand,'{}.sdf'.format(ligand)))
+                shutil.copy(os.path.join(docked_jobs_origin,conformer), os.path.join(pele_simulation_path,ligand,conformer))
 
             # Copying receptor
             if not os.path.isdir(receptor_destination):
                 os.mkdir(receptor_destination)
                 shutil.copy(receptor_origin_path, os.path.join(receptor_destination,'{}.mol2'.format('receptor')))
+
+        def _rdockPELEInputGenerator(previous_simulation_bool, simulation_path, force_field, truncated, perturbation_protocol, rescoring_method):
+
+            docked_ligands_path = '4_pele_simulation/docking_input/ligands'
+            receptor_path = '4_pele_simulation/docking_input/receptor'
+            pele_simulation_path = simulation_path
+
+            if not previous_simulation_bool:
+            
+                receptor = os.listdir(receptor_path)[0]
+                converted_receptor = 'receptor.pdb'
+
+                print(' - Converting receptor from mol2 to pdb.')
+
+                # Converting receptor from mol2 to pdb.
+                self._PDBConversor(os.path.join(receptor_path, receptor), receptor_path)
+
+                print(' - Converting {} ligands to pdb.'.format(len(os.listdir(docked_ligands_path))))
+
+                # Convert all the ligands to pdb and store them
+                for ligand in os.listdir(docked_ligands_path):
+                    ligand_name = ligand.split('.')[0]
+                    self._PDBConversor(os.path.join(docked_ligands_path, ligand), os.path.join(pele_simulation_path,ligand_name))
+                    shutil.copy(os.path.join(receptor_path,converted_receptor), os.path.join(pele_simulation_path,ligand_name))
+
+                print(' - Merging the {} ligands to the receptor.'.format(len(os.listdir(docked_ligands_path))))
+
+                # Merging all the inputs
+                for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
+                    ligand_folder_path = os.path.join(pele_simulation_path,ligand_folder)
+                    receptor = [x for x in os.listdir(ligand_folder_path) if x.startswith('receptor')][0]
+                    ligand = [x for x in os.listdir(ligand_folder_path) if x != receptor][0]
+                    self._PDBMerger(os.path.join(ligand_folder_path,receptor),os.path.join(ligand_folder_path,ligand))
+
+            print(' - Generating files for the {} simulations.'.format(len(os.listdir(docked_ligands_path))))
+
+            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
+                working_path = os.path.join(pele_simulation_path, ligand_folder)
+                input_simulation_file = os.listdir(working_path)[0]  
+                self._PELESimulationFiles(working_path, input_simulation_file, force_field, truncated, perturbation_protocol, rescoring_method) 
+
+            self.docking_tool = 'rdock'
+
 
         self._folderPreparation()
         forcefield_list, truncated_list, perturbation_list, rescoring_method_list = self._folderHierarchy(force_field, truncated, perturbation_protocol, rescoring_method)
@@ -647,7 +702,8 @@ class PELE:
         previous_simulation_bool = self._PELEJobChecker(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
         _sdfSplitterAndSelector()
         _rdockDockingPoseRetriever(simulation_path)
-
+        _rdockPELEInputGenerator(previous_simulation_bool, simulation_path, forcefield_list[1], truncated_list[1], perturbation_list[1], rescoring_method_list[1])
+        self._PELERunner(simulation_path)
  
     def setEquibindToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
 
