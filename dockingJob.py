@@ -361,7 +361,7 @@ class DockingJob:
                     'module load boost/1.64.0\n',
                     '\n',
                     '\n',
-                    'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50\n'.format(
+                    'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
                         val=i)
                 ])
 
