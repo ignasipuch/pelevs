@@ -331,14 +331,17 @@ class DockingAnalyzer:
         original dataset (since ligprep generates multiple conformers).
         """
 
+        # Sorting data
         df = pd.read_csv('3_docking_job/rDock_data.csv')
         sorted_df = df.sort_values('rdock_score')
         unique_df = sorted_df.drop_duplicates('ligand')
         final_df = unique_df.sort_values('ligand')
 
-        desired_order = ['ligand', 'conformer', 'file_name', 'file_entry', 'rdock_score']
+        # Adding new column with conformer generated.
+        final_df['docking_conformation'] = final_df['file_entry'] - (final_df['file_entry'] % 50) * 50 
 
         # Reorder the columns
+        desired_order = ['ligand', 'conformer', 'docking_conformation', 'file_name', 'file_entry', 'rdock_score']
         save_df = final_df.reindex(columns=desired_order)
         save_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
 
