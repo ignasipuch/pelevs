@@ -9,21 +9,45 @@ class PELE:
     """
     Attributes
     ==========
-    receptor : str
-        Name of the receptor's file (sdf, mol2 or pdb).
+    sampling : str
+        Sampling method chosen by the user.
+    protein_portion : str 
+        Selection of the protein with which PELE is going to
+        perform the simulation.
+    forcefield : str
+        Force-field used to perform the PELE simulation.
+    perturbation_protocol : str
+        Type of perturbation used in the PELE simulation.
+    docking_tool : str
+        Docking tool used to obtain the ligand poses.
 
     Methods
     =======
-    glideAnalysis(self, experimental_data, column_name)
-        Calculate energetic correlation between Glide's predictions and
-        experimental data. Also it plots the distribution of time spent
-        per ligand.
+    setGlideToPELESimulation(self, rescoring_method, force_field, truncated, perturbation_protocol)
+        With the results of the Glide docking, prepares a PELE simulation to be run at MN4.
+    setRdockToPELESimulation(self, rescoring_method, force_field, truncated, perturbation_protocol)
+        With the results of the Equibind docking, prepares a PELE simulation to be run at MN4.
+    setEquibindToPELESimulation(self, rescoring_method, force_field, truncated, perturbation_protocol)
+        With the results of the rDock docking, prepares a PELE simulation to be run at MN4.
 
     Hidden Methods
     ==============
-    _correlationPlotter(self, x, y, docking_method)
-        Plotts x and y in a z_score format and stores 
-        the image.
+    _folderPreparation(self)
+        Prepare necessary folders to store data.
+    _folderHierarchy(self, force_field, truncated, perturbation_protocol, rescoring_method)
+        Stores which variables have been set by the user.
+    _PELEJobManager(self, forcefield_list, truncated_list, perturbation_protocol_list, rescoring_method_list)
+        Creates hierarchical directories to store the inputs for the PELE simulations.
+    _PELEJobChecker(self, forcefield_list, truncated_list, perturbation_protocol_list, rescoring_method_list)
+        Checks if another pele job has been created previously to not repeat processes.
+    _PDBConversor(self, file_in, path_out)
+        Converts files from whatever format to pdb.
+    _PDBMerger(self, receptor, ligand)
+        Merges ligand and receptor into a single file.
+    _PELESimulationFiles(self, path, pdb_file, force_field, truncated, perturbation_protocol, rescoring_method)
+        Generates the yaml and the runner for each individual PELE simulation.
+    _PELERunner(self, simulation_path)
+        Generates a general runner.
     """
 
     def __init__(self):
@@ -38,6 +62,9 @@ class PELE:
         self.docking_tool = None
 
     def _folderPreparation(self):
+        """
+        Generate folders where data from the docking is going to be stored.
+        """
         
         if not os.path.isdir('4_pele_simulation'):
             os.mkdir('4_pele_simulation')
@@ -49,6 +76,36 @@ class PELE:
             os.mkdir('4_pele_simulation/pele_simulation')
 
     def _folderHierarchy(self, force_field, truncated, perturbation_protocol, rescoring_method):
+        """
+        Store which variables have been set by the user and to what have been set.
+
+        Parameters
+        ==========
+        force_field : str 
+            Forcefield of the simulation: opls or openff.
+        truncated : str 
+            Type of simulation for the PELE simulation: truncated or full.
+        perturbation_protocol : str 
+            Type of perturbation for the PELE simulation: if (induced fit), 
+            refinement or minimization.
+        rescoring_method : str 
+            Amount of sampling for the PELE simulation: xshort, short, long, xlong.
+
+        Returns
+        =======
+        forcefield_list : list
+            List with [bool, str] where the string is the forcefield chosen (or default)
+            and the bool indicates whether the forcefield option was chosen or default.
+        truncated_list : list
+            List with [bool, str] where the string is the protein portion chosen (or default)
+            and the bool indicates whether the protein portion option was chosen or default.
+        perturbation_list : list
+            List with [bool, str] where the string is the perturbation chosen (or default)
+            and the bool indicates whether the perturbation option was chosen or default.
+        rescoring_method_list : list
+            List with [bool, str] where the string is the rescoring method chosen (or default)
+            and the bool indicates whether the rescoring method  option was chosen or default.
+        """
 
         if force_field is None:
             force_field = 'opls'
@@ -414,11 +471,6 @@ class PELE:
                 'for d in *; if [ "$d" != "general_runner.sh" ]; then ; cd $d ; sbatch run_plat ; cd .. ; done\n'
             )
 
-    def setRdockToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
-        forcefield_list, truncated_list, perturbation_list, rescoring_method_list = self._folderHierarchy(force_field, truncated, perturbation_protocol, rescoring_method)
-        simulation_path = self._PELEJobManager(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
-        previous_simulation_bool = self._PELEJobChecker(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
-
     def setGlideToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
 
         def _glideMaegztoPDB():
@@ -505,6 +557,11 @@ class PELE:
         _glideDockingPoseRetriever(simulation_path)
         _glidePELEInputGenerator(previous_simulation_bool, simulation_path, forcefield_list[1], truncated_list[1], perturbation_list[1], rescoring_method_list[1])
         self._PELERunner(simulation_path)
+
+    def setRdockToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
+        forcefield_list, truncated_list, perturbation_list, rescoring_method_list = self._folderHierarchy(force_field, truncated, perturbation_protocol, rescoring_method)
+        simulation_path = self._PELEJobManager(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
+        previous_simulation_bool = self._PELEJobChecker(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
  
     def setEquibindToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
 
