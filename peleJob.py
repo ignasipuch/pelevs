@@ -3,7 +3,7 @@ import shutil
 from openbabel import openbabel as ob
 from Bio.PDB import PDBParser, PDBIO
 import re
-import pathlib
+import pandas as pd
 
 class PELE:
     """
@@ -559,9 +559,95 @@ class PELE:
         self._PELERunner(simulation_path)
 
     def setRdockToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
+        
+        def _sdfSplitterAndSelector():
+
+            path_docking = '3_docking_job/job/results'
+            path_docked_ligands = '4_pele_simulation/docking_input/ligands'
+
+            # Generating storage folders
+            if not os.path.isdir(path_docked_ligands):
+                os.mkdir(path_docked_ligands)
+            
+            print(' - Splitting all the outputted sdf files.')
+
+            # sdf splitting
+            for file in [x for x in os.listdir(path_docking) if x != '.ipynb_checkpoints']:
+                input_file = os.path.join(path_docking, file)
+                    
+                with open(input_file, 'r') as file:
+                    sdf_content = file.read()
+                    
+                previous_entry_id = None
+                entries = sdf_content.strip().split("$$$$")
+                auxiliar_counter = 0
+                
+                for entry in entries[:-1]:
+                    auxiliar_counter += 1
+                    count = auxiliar_counter - 50*((auxiliar_counter - 1)//50)
+                    entry = entry.strip()
+
+                    if entry:
+                        entry_lines = entry.split("\n")
+                        entry_id = None
+                        for i in range(len(entry_lines)):
+                            if entry_lines[i].strip().startswith(">  <s_lp_Variant>"):
+                                entry_id = entry_lines[i+1].strip()
+                                break
+
+                        if entry_id == previous_entry_id:
+                            previous_entry_id = entry_id
+                            output_file = os.path.join(path_docked_ligands,'{entry_id}_{c}.sdf'.format(entry_id=entry_id, c=count))
+
+                            with open(output_file, 'w') as outfile:
+                                outfile.write(entry)
+                        else:
+                            previous_entry_id = entry_id
+                            output_file = os.path.join(path_docked_ligands,'{entry_id}_{c}.sdf'.format(entry_id=entry_id, c=count))                 
+                            with open(output_file, 'w') as outfile:
+                                outfile.write(entry)
+
+        def _rdockDockingPoseRetriever(simulation_path):
+
+            # Generating paths
+            docked_jobs_origin = '4_pele_simulation/docking_input/ligands'
+            docking_job_path = '3_docking_job/job/'
+            csv_path = '3_docking_job/rDock_best_poses.csv'
+
+            receptor = [x for x in os.listdir(docking_job_path) if x.endswith('.mol2')][0]
+            receptor_origin_path = os.path.join(docking_job_path, receptor)
+            receptor_destination = '4_pele_simulation/docking_input/receptor'
+            pele_simulation_path = simulation_path
+
+            # Selecting which ligands we copy
+            df = pd.read_csv(csv_path)
+            df['file_name'] = df.apply(lambda row: f"{row['ligand']}-{row['conformer']}_{row['docking_conformation']}.sdf", axis=1)
+
+            file_list = df['file_name'].tolist()
+
+            # Copying docked ligands and generating folders
+            if not os.path.isdir(pele_simulation_path):
+                os.mkdir(pele_simulation_path)
+
+            for conformer in file_list:
+                ligand = conformer.split('-')[0]
+                if not os.path.isdir(os.path.join(pele_simulation_path,ligand)):
+                    os.mkdir(os.path.join(pele_simulation_path,ligand))
+
+                shutil.copy(os.path.join(docked_jobs_origin,conformer), os.path.join(pele_simulation_path,ligand,'{}.sdf'.format(ligand)))
+
+            # Copying receptor
+            if not os.path.isdir(receptor_destination):
+                os.mkdir(receptor_destination)
+                shutil.copy(receptor_origin_path, os.path.join(receptor_destination,'{}.mol2'.format('receptor')))
+
+        self._folderPreparation()
         forcefield_list, truncated_list, perturbation_list, rescoring_method_list = self._folderHierarchy(force_field, truncated, perturbation_protocol, rescoring_method)
         simulation_path = self._PELEJobManager(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
         previous_simulation_bool = self._PELEJobChecker(forcefield_list, truncated_list, perturbation_list, rescoring_method_list)
+        _sdfSplitterAndSelector()
+        _rdockDockingPoseRetriever(simulation_path)
+
  
     def setEquibindToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
 
