@@ -338,10 +338,12 @@ class DockingAnalyzer:
         final_df = unique_df.sort_values('ligand')
 
         # Adding new column with conformer generated.
-        final_df['docking_conformation'] = final_df['file_entry'] - ((final_df['file_entry'] - 1) // 50) * 50 
+        final_df['docking_conformation'] = final_df['file_entry'] - \
+            ((final_df['file_entry'] - 1) // 50) * 50
 
         # Reorder the columns
-        desired_order = ['ligand', 'conformer', 'docking_conformation', 'file_name', 'file_entry', 'rdock_score']
+        desired_order = ['ligand', 'conformer', 'docking_conformation',
+                         'file_name', 'file_entry', 'rdock_score']
         save_df = final_df.reindex(columns=desired_order)
         save_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
 
