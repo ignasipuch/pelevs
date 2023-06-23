@@ -685,9 +685,6 @@ class PELE:
                 if not os.path.isdir(os.path.join(pele_simulation_path, ligand)):
                     os.mkdir(os.path.join(pele_simulation_path, ligand))
 
-                shutil.copy(os.path.join(docked_jobs_origin, conformer), os.path.join(
-                    pele_simulation_path, ligand, conformer))
-
             # Copying receptor
             if not os.path.isdir(receptor_destination):
                 os.mkdir(receptor_destination)
@@ -745,6 +742,10 @@ class PELE:
                 input_simulation_file = os.listdir(working_path)[0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
+                
+            print(' - Job created to run at MN4.')
+            print(
+                ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
 
             self.docking_tool = 'rdock'
 
@@ -840,6 +841,10 @@ class PELE:
                 input_simulation_file = os.listdir(working_path)[0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
+                
+            print(' - Job created to run at MN4.')
+            print(
+                ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
 
             self.docking_tool = 'equibind'
 
