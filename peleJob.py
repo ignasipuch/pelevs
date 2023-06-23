@@ -483,7 +483,7 @@ class PELE:
 
         with open(os.path.join(simulation_path, 'general_runner.sh'), 'w') as fileout:
             fileout.writelines(
-                'for d in *; if [ "$d" != "general_runner.sh" ]; then ; cd $d ; sbatch run_plat ; cd .. ; done\n'
+                'for d in *; do if [ "$d" != "general_runner.sh" ]; then cd "$d"; sbatch run_plat; cd ..; fi; done\n'
             )
 
     def setGlideToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
@@ -565,7 +565,7 @@ class PELE:
                         ligand_folder_path, ligand))
 
             print(
-                ' - Generating files for the {} simulations.'.format(len(os.listdir(docked_ligands_path))))
+                ' - Generating yaml and run files.')
 
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
@@ -734,7 +734,7 @@ class PELE:
                         ligand_folder_path, ligand))
 
             print(
-                ' - Generating files for the {} simulations.'.format(len(os.listdir(docked_ligands_path))))
+                ' - Generating yaml and run files.')
 
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
@@ -833,7 +833,7 @@ class PELE:
                         ligand_folder_path, ligand))
 
             print(
-                ' - Generating files for the {} simulations.'.format(len(os.listdir(docked_ligands_path))))
+                ' - Generating yaml and run files.')
 
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
