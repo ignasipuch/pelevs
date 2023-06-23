@@ -140,6 +140,31 @@ class PELE:
         return forcefield_list, truncated_list, perturbation_list, rescoring_method_list
 
     def _PELEJobManager(self, forcefield_list, truncated_list, perturbation_protocol_list, rescoring_method_list):
+        """
+        Organize and create the hierarchy of folders required for the necessities of the 
+        simulations wanted. If specified, the hierarchy will be:
+        {force field}/{receptor portion}/{perturbation protocol}/{rescoring sampling}.
+
+        Parameters
+        ==========
+        forcefield_list : list
+            List with [bool, str] where the string is the forcefield chosen (or default)
+            and the bool indicates whether the forcefield option was chosen or default.
+        truncated_list : list
+            List with [bool, str] where the string is the protein portion chosen (or default)
+            and the bool indicates whether the protein portion option was chosen or default.
+        perturbation_list : list
+            List with [bool, str] where the string is the perturbation chosen (or default)
+            and the bool indicates whether the perturbation option was chosen or default.
+        rescoring_method_list : list
+            List with [bool, str] where the string is the rescoring method chosen (or default)
+            and the bool indicates whether the rescoring method  option was chosen or default.
+
+        Returns
+        =======
+        simulation_path : str
+            Path where all the PELE simulation files are going to be stored.
+        """
 
         path = '4_pele_simulation/'
         pele_simulation_path = '4_pele_simulation/pele_simulation'
@@ -177,9 +202,35 @@ class PELE:
 
         print(' - Jobs will be stored at: {}'.format(os.path.join(pele_simulation_path, directory)))
 
-        return os.path.join(pele_simulation_path, directory)
+        simulation_path = os.path.join(pele_simulation_path, directory)
+
+        return simulation_path
 
     def _PELEJobChecker(self, forcefield_list, truncated_list, perturbation_protocol_list, rescoring_method_list):
+        """
+        Check if a previous PELE simulation job has been created to avoid loss of time. 
+        If it exists, it copies the pdb file to new wanted PELE job directory.
+
+        Parameters
+        ==========
+        forcefield_list : list
+            List with [bool, str] where the string is the forcefield chosen (or default)
+            and the bool indicates whether the forcefield option was chosen or default.
+        truncated_list : list
+            List with [bool, str] where the string is the protein portion chosen (or default)
+            and the bool indicates whether the protein portion option was chosen or default.
+        perturbation_list : list
+            List with [bool, str] where the string is the perturbation chosen (or default)
+            and the bool indicates whether the perturbation option was chosen or default.
+        rescoring_method_list : list
+            List with [bool, str] where the string is the rescoring method chosen (or default)
+            and the bool indicates whether the rescoring method  option was chosen or default.
+
+        Returns
+        =======
+        previous_simulation_bool : bool
+            Boolean to determine whether or not a previous PELE job exists.
+        """
 
         path = '4_pele_simulation/pele_simulation'
 
@@ -254,8 +305,34 @@ class PELE:
                 path_out, '{}.pdb'.format(file_name)))
 
     def _PDBMerger(self, receptor, ligand):
+        """
+        Merges receptor and ligand into a single file with the characteristics required by
+        PELE to work properly.
+
+        Parameters
+        ==========
+        receptor : str
+            Path to the receptor file we want to merge.
+        ligand : str
+            Path to the ligand file we want to merge.
+        """
 
         def _receptorModifier(receptor):
+            """
+            Changes residues numbers and counts number of atoms in the receptor.
+
+            Parameters
+            ==========
+            receptor : str
+                Path to the receptor file we want to merge.
+
+            Returns
+            =======
+            file_mod_prot : str
+                Path to the modified version of the receptor.
+            ligand_cont_num : int
+                Number of atoms in the receptor.
+            """
 
             file_mod_prot = receptor.split('.pdb')[0] + '_mod.pdb'
 
@@ -286,10 +363,25 @@ class PELE:
             return file_mod_prot, ligand_cont_num
 
         def _ligandAtomChainNumberModifier(ligand):
+            """
+            Modifies the ligand file to have the characteristics needed for the PELE simulation:
+            like the ligand chain or the chain name.
+
+            Parameters
+            ==========
+            ligand : str
+                Path to the ligand file we want to merge.
+
+            Returns
+            =======
+            file_mod_lig : str
+                Path to the modified version of the ligand.
+            """
 
             file_mod1_lig = ligand.split('.pdb')[0] + '_m.pdb'
             file_mod_lig = ligand.split('.pdb')[0] + '_mod.pdb'
 
+            # Modifying the atom names
             cont = 1
             with open(ligand) as filein:
                 with open(file_mod1_lig, 'w') as fileout:
@@ -318,6 +410,21 @@ class PELE:
             return file_mod_lig
 
         def _receptorLigandMerger(receptor, ligand):
+            """
+            Merges the receptor and the ligand into a single file.
+
+            Parameters
+            ==========
+            receptor : str
+                Path to the receptor file we want to merge.
+            ligand : str
+                Path to the ligand file we want to merge.
+
+            Returns
+            =======
+            writing_path : str
+                Path to the newly created pdb with both molecules.
+            """
 
             output_file = 'intermediate.pdb'
             path_files = os.path.dirname(ligand)
@@ -328,7 +435,20 @@ class PELE:
 
             return writing_path
 
-        def _PELEInputAdapter(merged, output_file, ligand_cont_num):
+        def _inputAdapter(merged, output_file, ligand_cont_num):
+            """
+            Changes the atom numeration of the ligand according to the number
+            of atoms of the receptor.
+
+            Parameters
+            ==========
+            merged : str
+                Path to the merged file.
+            output_file : str
+                Path of the definitive merged file.
+            ligand_cont_num : int
+                Number of atoms of the receptor.
+            """
 
             # Changing the atom numeration of the ligand.
             with open(merged, 'r') as filein:
@@ -351,6 +471,15 @@ class PELE:
                                 fileout.writelines(line)
 
         def _intermediateFilesRemover(output_file):
+            """
+            Removes all the intermediate files that have been 
+            generated in the process.
+
+            Parameters
+            ==========
+            output_file : str
+                Path of the definitive merged file.
+            """
 
             working_directory = os.path.dirname(output_file)
             input_PELE_file = os.path.basename(output_file)
@@ -366,11 +495,35 @@ class PELE:
         file_mod_prot, ligand_cont_num = _receptorModifier(receptor)
         file_mod_lig = _ligandAtomChainNumberModifier(ligand)
         intermediate = _receptorLigandMerger(file_mod_prot, file_mod_lig)
-        _PELEInputAdapter(intermediate, output_file, ligand_cont_num)
+        _inputAdapter(intermediate, output_file, ligand_cont_num)
         _intermediateFilesRemover(output_file)
 
     def _PELESimulationFiles(self, path, pdb_file, force_field, truncated, perturbation_protocol, rescoring_method):
+        """
+        Generates the yaml and the run files for the specific conditions 
+        inputted by the user.
 
+        Parameters
+        ==========
+        path : str
+            Path where the simulation is stored.
+        pdb_file : str
+            Name of the pdb file for which the yaml and run are needed.
+        forcefield_list : list
+            List with [bool, str] where the string is the forcefield chosen (or default)
+            and the bool indicates whether the forcefield option was chosen or default.
+        truncated_list : list
+            List with [bool, str] where the string is the protein portion chosen (or default)
+            and the bool indicates whether the protein portion option was chosen or default.
+        perturbation_list : list
+            List with [bool, str] where the string is the perturbation chosen (or default)
+            and the bool indicates whether the perturbation option was chosen or default.
+        rescoring_method_list : list
+            List with [bool, str] where the string is the rescoring method chosen (or default)
+            and the bool indicates whether the rescoring method  option was chosen or default.
+        """
+
+        # YAML file generation
         with open(os.path.join(path, 'input.yaml'), 'w') as fileout:
             fileout.writelines(
                 'complex_data: "' + pdb_file + '"\n'
@@ -439,6 +592,7 @@ class PELE:
                 '   - flow: induced_fit_refinement\n'
             )
 
+        # Run file generation
         with open(os.path.join(path, 'run_plat'), 'w') as fileout:
             fileout.writelines(
                 '#!/bin/bash\n'
@@ -480,15 +634,53 @@ class PELE:
             )
 
     def _PELERunner(self, simulation_path):
+        """
+        Generates a general runner that iterates over the individual runners.
 
+        Parameters
+        ==========
+        simulation_path : str
+            Path were the simulation is being stored.
+
+        """
         with open(os.path.join(simulation_path, 'general_runner.sh'), 'w') as fileout:
             fileout.writelines(
                 'for d in *; do if [ "$d" != "general_runner.sh" ]; then cd "$d"; sbatch run_plat; cd ..; fi; done\n'
             )
 
     def setGlideToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
+        """
+        From a Glide docking, obtain the best scores per ligand and the conformations associated
+        to then prepare a PELE simulation with certain variables to be chosen.
+
+        Parameters
+        ==========
+        rescoring_method : str
+            Length of the sampling in the PELE simulation: 
+                1. xshort (cpus = 8; epochs = 1; steps = 5)
+                2. short (cpus = 16; epochs = 1; steps = 10)
+                3. long (cpus = 32; epochs = 5; steps = 10)
+                4. xlong (cpus = 48; epochs = 5; steps = 25)
+        force_field : str
+            Force field to be used in the PELE simulation: 
+                1. opls (opls2005) -> Default
+                2. openff (openff-2.0.0)
+        truncated : str
+            Portion of the receptor to be used in the simulation:
+                1. truncated (flexible_region_radius = 8; frozen_region_radius = 13) -> Default
+                2. full (whole protein)
+        perturbation_protocol : str
+            Strength of the perturbations tried by PELE in each Monte Carlo step:
+                1. minimization (pele_perturbation_level = 0)
+                2. refinement (pele_perturbation_level = 2) -> Default
+                3. if (induced_fit: pele_perturbation_level = 3)
+        """
 
         def _glideMaegztoPDB():
+            """
+            If not done previously, split the Glide's output maegz file into its components 
+            in pdb format by using the script in: scripts/glide_to_pdb.py.
+            """
 
             maegz_to_pdb_path = '3_docking_job/job/output_pdb_files'
 
@@ -503,6 +695,14 @@ class PELE:
                     '$SCHRODINGER/run python3 dockprotocol/scripts/glide_to_pdb.py -jn {}'.format('glide_job'))
 
         def _glideDockingPoseRetriever(simulation_path):
+            """
+            Creation of necessary folders and copying important files.
+
+            Parameters
+            ==========
+            simulation_path : str
+                Path where the PELE simulation is being stored.
+            """
 
             # Generating paths
             docked_jobs_origin = '3_docking_job/job/output_pdb_files'
@@ -533,6 +733,24 @@ class PELE:
                     receptor_destination, '{}.pdb'.format('receptor')))
 
         def _glidePELEInputGenerator(previous_simulation_bool, simulation_path, force_field, truncated, perturbation_protocol, rescoring_method):
+            """
+            Merging receptors and ligands and generating the necessary yamls and runs.
+
+            Parameters
+            ==========
+            previous_simulation_bool : bool
+                Boolean to determine whether or not a previous PELE job exists.
+            simulation_path : str
+                Path where the PELE simulation is being stored.
+            rescoring_method : str
+                Length of the sampling in the PELE simulation.
+            force_field : str
+                Force field to be used in the PELE simulation.
+            truncated : str
+                Portion of the receptor to be used in the simulation.
+            perturbation_protocol : str
+                Strength of the perturbations tried by PELE in each Monte Carlo step.
+            """
 
             docked_ligands_path = '4_pele_simulation/docking_input/ligands'
             receptor_path = '4_pele_simulation/docking_input/receptor'
@@ -567,6 +785,7 @@ class PELE:
             print(
                 ' - Generating yaml and run files.')
 
+            # Generating yamls and runs
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
@@ -594,8 +813,37 @@ class PELE:
         self._PELERunner(simulation_path)
 
     def setRdockToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
+        """
+        From an rDock docking, obtain the best scores per ligand and the conformations associated
+        to then prepare a PELE simulation with certain variables to be chosen.
+
+        Parameters
+        ==========
+        rescoring_method : str
+            Length of the sampling in the PELE simulation: 
+                1. xshort (cpus = 8; epochs = 1; steps = 5)
+                2. short (cpus = 16; epochs = 1; steps = 10)
+                3. long (cpus = 32; epochs = 5; steps = 10)
+                4. xlong (cpus = 48; epochs = 5; steps = 25)
+        force_field : str
+            Force field to be used in the PELE simulation: 
+                1. opls (opls2005) -> Default
+                2. openff (openff-2.0.0)
+        truncated : str
+            Portion of the receptor to be used in the simulation:
+                1. truncated (flexible_region_radius = 8; frozen_region_radius = 13) -> Default
+                2. full (whole protein)
+        perturbation_protocol : str
+            Strength of the perturbations tried by PELE in each Monte Carlo step:
+                1. minimization (pele_perturbation_level = 0)
+                2. refinement (pele_perturbation_level = 2) -> Default
+                3. if (induced_fit: pele_perturbation_level = 3)
+        """
 
         def _sdfSplitterAndSelector():
+            """
+            If not done previously, split the rDock's output sdf files into its components.
+            """
 
             path_docking = '3_docking_job/job/results'
             path_docked_ligands = '4_pele_simulation/docking_input/ligands'
@@ -645,6 +893,15 @@ class PELE:
                                 outfile.write(entry)
 
         def _rdockDockingPoseRetriever(simulation_path):
+            """
+            Creation of necessary folders, copying the receptor, selecting ligands with 
+            best scores, copying their structures and deleting the rest.
+
+            Parameters
+            ==========
+            simulation_path : str
+                Path where the PELE simulation is being stored.
+            """
 
             # Generating paths
             docked_jobs_origin = '4_pele_simulation/docking_input/ligands'
@@ -692,6 +949,24 @@ class PELE:
                     receptor_destination, '{}.mol2'.format('receptor')))
 
         def _rdockPELEInputGenerator(previous_simulation_bool, simulation_path, force_field, truncated, perturbation_protocol, rescoring_method):
+            """
+            Converting ligands and receptor to then merge them and generate the necessary yamls and runs.
+
+            Parameters
+            ==========
+            previous_simulation_bool : bool
+                Boolean to determine whether or not a previous PELE job exists.
+            simulation_path : str
+                Path where the PELE simulation is being stored.
+            rescoring_method : str
+                Length of the sampling in the PELE simulation.
+            force_field : str
+                Force field to be used in the PELE simulation.
+            truncated : str
+                Portion of the receptor to be used in the simulation.
+            perturbation_protocol : str
+                Strength of the perturbations tried by PELE in each Monte Carlo step.
+            """
 
             docked_ligands_path = '4_pele_simulation/docking_input/ligands'
             receptor_path = '4_pele_simulation/docking_input/receptor'
@@ -736,6 +1011,7 @@ class PELE:
             print(
                 ' - Generating yaml and run files.')
 
+            # Generating yamls and runs
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
@@ -763,8 +1039,44 @@ class PELE:
         self._PELERunner(simulation_path)
 
     def setEquibindToPELESimulation(self, rescoring_method, force_field=None, truncated=None, perturbation_protocol=None):
+        """
+        From an Equibind docking prepare a PELE simulation with certain variables to be chosen. 
+        Since Equibind does not yield any score, all the outputs from the docking are simulated with
+        PELE. The nomenclature for each folder/pdb is: {ligand}_{ligprep_conformer}.
+
+        Parameters
+        ==========
+        rescoring_method : str
+            Length of the sampling in the PELE simulation: 
+                1. xshort (cpus = 8; epochs = 1; steps = 5)
+                2. short (cpus = 16; epochs = 1; steps = 10)
+                3. long (cpus = 32; epochs = 5; steps = 10)
+                4. xlong (cpus = 48; epochs = 5; steps = 25)
+        force_field : str
+            Force field to be used in the PELE simulation: 
+                1. opls (opls2005) -> Default
+                2. openff (openff-2.0.0)
+        truncated : str
+            Portion of the receptor to be used in the simulation:
+                1. truncated (flexible_region_radius = 8; frozen_region_radius = 13) -> Default
+                2. full (whole protein)
+        perturbation_protocol : str
+            Strength of the perturbations tried by PELE in each Monte Carlo step:
+                1. minimization (pele_perturbation_level = 0)
+                2. refinement (pele_perturbation_level = 2) -> Default
+                3. if (induced_fit: pele_perturbation_level = 3)
+        """
 
         def _equibindDockingPoseRetriever(simulation_path):
+            """
+            Creation of necessary folders, copying the receptor and all the 
+            ligands.
+
+            Parameters
+            ==========
+            simulation_path : str
+                Path where the PELE simulation is being stored.
+            """
 
             # Generating paths
             docked_jobs_origin = '3_docking_job/job/equibind_results'
@@ -798,6 +1110,25 @@ class PELE:
                     receptor_destination, '{}.pdb'.format('receptor')))
 
         def _equibindPELEInputGenerator(previous_simulation_bool, simulation_path, force_field, truncated, perturbation_protocol, rescoring_method):
+            """
+            If not done previously, converting ligands to then merge them to the receptor
+            and generate the necessary yamls and runs.
+
+            Parameters
+            ==========
+            previous_simulation_bool : bool
+                Boolean to determine whether or not a previous PELE job exists.
+            simulation_path : str
+                Path where the PELE simulation is being stored.
+            rescoring_method : str
+                Length of the sampling in the PELE simulation.
+            force_field : str
+                Force field to be used in the PELE simulation.
+            truncated : str
+                Portion of the receptor to be used in the simulation.
+            perturbation_protocol : str
+                Strength of the perturbations tried by PELE in each Monte Carlo step.
+            """
 
             docked_ligands_path = '4_pele_simulation/docking_input/ligands'
             receptor_path = '4_pele_simulation/docking_input/receptor'
@@ -835,6 +1166,7 @@ class PELE:
             print(
                 ' - Generating yaml and run files.')
 
+            # Generating yamls and runs
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
