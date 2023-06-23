@@ -1018,7 +1018,7 @@ class PELE:
                 input_simulation_file = os.listdir(working_path)[0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
-                
+
             print(' - Job created to run at MN4.')
             print(
                 ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
@@ -1173,7 +1173,7 @@ class PELE:
                 input_simulation_file = os.listdir(working_path)[0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
-                
+
             print(' - Job created to run at MN4.')
             print(
                 ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
