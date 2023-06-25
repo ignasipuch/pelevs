@@ -5,7 +5,7 @@ This script is designed to convert glide's maegz to pdbs.
 
 __author__ = "Ignasi Puch-Giner "
 __maintainer__ = "Ignasi Puch-Giner"
-__email__ = "ignasg.puchginer@bsc.es"
+__email__ = "ignasi.puchginer@bsc.es"
 
 import sys
 import argparse
