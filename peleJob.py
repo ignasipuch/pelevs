@@ -795,7 +795,7 @@ class PELE:
 
             print(' - Job created to run at MN4.')
             print(
-                ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
+                ' - Send pele_simulation_folder to perform the simulations and run:\n   bash general_runner.sh.')
 
             self.docking_tool = 'glide'
 
@@ -1021,7 +1021,7 @@ class PELE:
 
             print(' - Job created to run at MN4.')
             print(
-                ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
+                ' - Send pele_simulation_folder to perform the simulations and run:\n   bash general_runner.sh.')
 
             self.docking_tool = 'rdock'
 
@@ -1176,7 +1176,7 @@ class PELE:
 
             print(' - Job created to run at MN4.')
             print(
-                ' - Send pele_simulation_folder to perform the simulations and run:\n bash glide_runner.sh.')
+                ' - Send pele_simulation_folder to perform the simulations and run:\n   bash general_runner.sh.')
 
             self.docking_tool = 'equibind'
 
@@ -1191,3 +1191,27 @@ class PELE:
         _equibindPELEInputGenerator(previous_simulation_bool, simulation_path,
                                     forcefield_list[1], truncated_list[1], perturbation_list[1], rescoring_method_list[1])
         self._PELERunner(simulation_path)
+
+    def PELEDownloader(self):
+        """
+        Generates and copies files in order to make the volume of data downloaded
+        as small as possible.  
+        """
+        
+        # Generating paths
+        path_destination = self.docking_tool
+        path_script = 'dockprotocol/scripts/pele_downloader.py'
+        path_simulation = '4_pele_simulation'
+        file_name = 'download_files.sh'
+        download_file_path = os.path.join(path_simulation,file_name)
+
+        # Copying script
+        shutil.copy(path_script,path_simulation)
+
+        # Generating runner
+        with open(download_file_path, 'w') as filein:
+            filein.writelines(
+                'python pele_downloader.py -o {}'.format(path_destination)
+            )
+        
+        print(' - Run:\n   bash {}\n   After PELE simulations have been performed.'.format(file_name))
