@@ -1195,7 +1195,8 @@ class PELE:
     def PELEDownloader(self):
         """
         Generates and copies files in order to make the volume of data downloaded
-        as small as possible.  
+        as small as possible. This method is thought to be used after all the jobs wanted 
+        have been generated.
         """
         
         # Generating paths
