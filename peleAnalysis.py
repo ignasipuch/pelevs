@@ -2,6 +2,9 @@ import os
 import pandas as pd
 import shutil
 import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
+import seaborn as sns
 
 class PELEAnalyzer:
 
@@ -223,10 +226,10 @@ class PELEAnalyzer:
 
             else: 
 
-                be_list = 5*['Nan']
-                te_list = 5*['Nan']
-                sasa_list = 5*['Nan']
-                rmsd_list = 2*['Nan']
+                be_list = 5*[np.NaN]
+                te_list = 5*[np.NaN]
+                sasa_list = 5*[np.NaN]
+                rmsd_list = 2*[np.NaN]
 
             return be_list, te_list, sasa_list, rmsd_list
 
@@ -317,7 +320,79 @@ class PELEAnalyzer:
         self.calculated_data = df_all_data
         self.all_data = df_total
 
-    def correlationPlotter(self):
+    def correlationPlotter(self, x_label, y_label, df=None):
 
-        pass
+        def plotter(df, x_label, y_label):
 
+            x = df[x_label].to_numpy()
+            y = df[y_label].to_numpy()
+
+            # Calculate z-scores for x and y
+            z_x = (x - np.mean(x)) / np.std(x)
+            z_y = (y - np.mean(y)) / np.std(y)
+
+            m_z, n_z, r_z, p_z, _ = linregress(z_x, z_y)
+
+            plt.figure()
+            plt.scatter(z_x, z_y)
+
+            # Set labels and title
+            plt.xlabel('Z score experimental')
+            plt.ylabel('Z score calculated')
+            plt.title('{x} vs. {y}: Z-score correlation'.format(x=x_label, y=y_label))
+            plt.plot(z_x, m_z*np.array(z_x) + n_z, color='orange',
+                    label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_z, p_z, len(x)))
+            plt.legend(loc='best')
+            plt.savefig(
+                '5_pele_analysis/images/{x}_{y}_zscore_correlation.png'.format(x=x_label, y=y_label), format='png')
+
+            m, n, r, p, _ = linregress(x, y)
+
+            plt.figure()
+            plt.scatter(x, y)
+
+            # Set labels and title
+            plt.xlabel('Experimental')
+            plt.ylabel('Calculated')
+            plt.title('{x} vs. {y}: correlation'.format(x=x_label, y=y_label))
+            plt.plot(x, m*np.array(x) + n, color='orange',
+                    label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
+            plt.legend(loc='best')
+            plt.savefig(
+                '5_pele_analysis/images/{x}_{y}_correlation.png'.format(x=x_label, y=y_label), format='png')
+
+        if df is None:
+
+            # Dropping NaN rows.
+            df_original = self.all_data
+            length_df = len(df_original)
+            df = df_original.dropna()
+            length_df_wo_NaN = len(df)
+
+            print(' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+
+            # Creating a folder to store plots
+            if not os.path.isdir('5_pele_analysis/images'):
+                os.mkdir('5_pele_analysis/images')
+
+            plotter(df, x_label, y_label)
+
+        else: 
+
+            # Dropping NaN rows.
+            df_original = df
+            length_df = len(df_original)
+            df = df_original.dropna()
+            length_df_wo_NaN = len(df)
+
+            print(' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+
+            # Creating a folder to store plots
+            if not os.path.isdir('5_pele_analysis/images'):
+                os.mkdir('5_pele_analysis/images')
+
+            plotter(df, x_label, y_label)
+
+        
+
+        
