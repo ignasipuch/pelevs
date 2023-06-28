@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import linregress
 import seaborn as sns
 
+
 class PELEAnalyzer:
 
     def __init__(self):
@@ -73,19 +74,19 @@ class PELEAnalyzer:
         path_analysis = self._path_analysis
 
         folders_to_check = []
-        rescorings = ['xshort','short','long','xlong']
-        
+        rescorings = ['xshort', 'short', 'long', 'xlong']
+
         for root, _, _ in os.walk(path_simulation):
 
             if os.path.basename(root) in rescorings:
                 new_path = root.replace(path_simulation, path_analysis)
                 folders_to_check.append(root)
-                
+
                 if not os.path.isdir(new_path):
                     os.makedirs(new_path)
 
         return folders_to_check
-    
+
     def _energyCalculator(self, dataset_location, system, path_system):
         """
         First, retrieves the characteristics of all the simulations performed (docking protocol, forcefield, protein part, 
@@ -159,11 +160,11 @@ class PELEAnalyzer:
             """
 
             # PELE options
-            docking_tools = ['glide','rdock','equibind']
-            forcefield = ['opls','openff']
+            docking_tools = ['glide', 'rdock', 'equibind']
+            forcefield = ['opls', 'openff']
             truncated = ['full', 'truncated']
             perturbation = ['minimization', 'if', 'refinement']
-            rescorings = ['xshort','short','long','xlong']
+            rescorings = ['xshort', 'short', 'long', 'xlong']
 
             location = dataset_location.split('/')
 
@@ -183,7 +184,7 @@ class PELEAnalyzer:
                 elif directory in truncated:
                     truncated_param = directory
                 elif directory in perturbation:
-                    perturbation_param = directory           
+                    perturbation_param = directory
                 elif directory in rescorings:
                     rescorings_param = directory
 
@@ -213,8 +214,8 @@ class PELEAnalyzer:
 
             def minimum(vector):
                 return min(vector)
-            
-            def boltzmann(vector,te,T):
+
+            def boltzmann(vector, te, T):
                 """
                 Function
                 ----------
@@ -237,7 +238,7 @@ class PELEAnalyzer:
                     Value of the boltzmann weighted energy.
                 """
 
-                R = 1.985e-3 # Gas constant in kcal/mol
+                R = 1.985e-3  # Gas constant in kcal/mol
                 vector = np.array(vector)
 
                 exp_bz = np.exp(-te/(R*T))
@@ -246,34 +247,35 @@ class PELEAnalyzer:
                 ene_bz = nominator/denominator
 
                 return ene_bz
-            
+
             def p5(vector):
-                return np.average(np.percentile(vector,5))
+                return np.average(np.percentile(vector, 5))
 
             def p10(vector):
-                return np.average(np.percentile(vector,10))
+                return np.average(np.percentile(vector, 10))
 
             def p25(vector):
-                return np.average(np.percentile(vector,25))
+                return np.average(np.percentile(vector, 25))
 
             def maximum(vector):
                 return max(vector)
-        
+
             def average(vector):
                 return np.average(vector)
-            
+
             te = []
             be = []
             sasa = []
             rmsd = []
 
-            list_epochs = [x for x in os.listdir(path_system) if os.path.isdir(os.path.join(path_system,x))]
+            list_epochs = [x for x in os.listdir(
+                path_system) if os.path.isdir(os.path.join(path_system, x))]
 
             if len(list_epochs) != 0:
                 for epoch in list_epochs:
-                    path_epoch = os.path.join(path_system,epoch)
+                    path_epoch = os.path.join(path_system, epoch)
                     for report in [x for x in os.listdir(path_epoch) if x.startswith('report')]:
-                        path_report = os.path.join(path_epoch,report)
+                        path_report = os.path.join(path_epoch, report)
                         with open(path_report, 'r') as filein:
                             cont = 0
                             for line in filein:
@@ -294,37 +296,37 @@ class PELEAnalyzer:
 
                 # Binding Energy
                 be_min = minimum(be)
-                be_bz = boltzmann(be,te_n,298.)
+                be_bz = boltzmann(be, te_n, 298.)
                 be_p5 = p5(be)
                 be_p10 = p10(be)
                 be_p25 = p25(be)
 
-                be_list = [be_min,be_bz,be_p5,be_p10,be_p25]
+                be_list = [be_min, be_bz, be_p5, be_p10, be_p25]
 
                 # Total energy
                 te_min = minimum(te)
-                te_bz = boltzmann(te,te_n,298.)
+                te_bz = boltzmann(te, te_n, 298.)
                 te_p5 = p5(te)
                 te_p10 = p10(te)
                 te_p25 = p25(te)
 
-                te_list = [te_min,te_bz,te_p5,te_p10,te_p25]
+                te_list = [te_min, te_bz, te_p5, te_p10, te_p25]
 
                 # SASA
                 sasa_min = minimum(sasa)
-                sasa_bz = boltzmann(sasa,te_n,298.)
+                sasa_bz = boltzmann(sasa, te_n, 298.)
                 sasa_av = average(sasa)
                 sasa_max = maximum(sasa)
 
-                sasa_list = [sasa_min,sasa_bz,sasa_av,sasa_max]
+                sasa_list = [sasa_min, sasa_bz, sasa_av, sasa_max]
 
                 # RMSD
                 rmsd_max = maximum(rmsd)
                 rmsd_av = average(rmsd)
 
-                rmsd_list = [rmsd_max,rmsd_av]
+                rmsd_list = [rmsd_max, rmsd_av]
 
-            else: 
+            else:
 
                 be_list = 5*[np.NaN]
                 te_list = 5*[np.NaN]
@@ -333,9 +335,9 @@ class PELEAnalyzer:
 
             return be_list, te_list, sasa_list, rmsd_list
 
-        def _resultsToDictionary(docking_param, forcefield_param, truncated_param, 
-                                perturbation_param, rescorings_param, system, 
-                                be_list, te_list, sasa_list, rmsd_list):
+        def _resultsToDictionary(docking_param, forcefield_param, truncated_param,
+                                 perturbation_param, rescorings_param, system,
+                                 be_list, te_list, sasa_list, rmsd_list):
             """
             Joins all the data into a single dataframe with all the information.
 
@@ -367,7 +369,7 @@ class PELEAnalyzer:
             simulation_data_dict : dict
                 Dictionary with all the data of all the and all the scores calculated. 
             """
-            
+
             be_min, be_bz, be_p5, be_p10, be_p25 = be_list
             te_min, te_bz, te_p5, te_p10, te_p25 = te_list
             sasa_min, sasa_bz, sasa_av, sasa_max = sasa_list
@@ -395,15 +397,17 @@ class PELEAnalyzer:
                                     'sasa_max': sasa_max,
                                     'rmsd_max': rmsd_max,
                                     'rmsd_av': rmsd_av}
-            
+
             return simulation_data_dict
-            
-        docking_param, forcefield_param, truncated_param, perturbation_param, rescorings_param = _PELEOptionsRetriever(dataset_location)
-        be_list, te_list, sasa_list, rmsd_list = _energyInSimulation(path_system)
-        simulation_data_dict = _resultsToDictionary(docking_param, forcefield_param, truncated_param, 
-                                perturbation_param, rescorings_param, system, 
-                                be_list, te_list, sasa_list, rmsd_list)
-    
+
+        docking_param, forcefield_param, truncated_param, perturbation_param, rescorings_param = _PELEOptionsRetriever(
+            dataset_location)
+        be_list, te_list, sasa_list, rmsd_list = _energyInSimulation(
+            path_system)
+        simulation_data_dict = _resultsToDictionary(docking_param, forcefield_param, truncated_param,
+                                                    perturbation_param, rescorings_param, system,
+                                                    be_list, te_list, sasa_list, rmsd_list)
+
         return simulation_data_dict
 
     def experimentalDataCollector(self, path_experimental_data=None):
@@ -415,30 +419,34 @@ class PELEAnalyzer:
         path_experimental_data : str
             Path to the experimental data in case it has not been inputted previously 
             in the pipeline.   
-        """      
+        """
 
         path_input_data = '1_input_files/experimental_energies'
 
         if path_experimental_data is not None:
             if os.path.isfile(path_experimental_data):
                 df = pd.read_csv(path_experimental_data)
-                
+
                 if not os.path.isdir(path_input_data):
                     os.mkdir(path_input_data)
 
-                shutil.move(path_experimental_data,path_input_data)
+                shutil.move(path_experimental_data, path_input_data)
             else:
                 print(' - Path inputed is not valid. Please check the path.')
                 print(' - Checking if experimental data has been inputted previously.')
 
         elif path_experimental_data is None:
             if os.path.isdir(path_input_data):
-                experimental_data_file = [x for x in os.listdir(path_input_data) if x.endswith('.csv')][0]
-                path_input_experimental_data = os.path.join(path_input_data,experimental_data_file)
+                experimental_data_file = [x for x in os.listdir(
+                    path_input_data) if x.endswith('.csv')][0]
+                path_input_experimental_data = os.path.join(
+                    path_input_data, experimental_data_file)
                 df = pd.read_csv(path_input_experimental_data, index_col=0)
-                print(' - Experimental data found at {}'.format(path_input_experimental_data))
+                print(
+                    ' - Experimental data found at {}'.format(path_input_experimental_data))
             else:
-                raise Exception('MissingExperimentalData: The inputted path is not valid and experimental data has not been inputed previously. Please use the method .experimentalDataCollector to input the data.')
+                raise Exception(
+                    'MissingExperimentalData: The inputted path is not valid and experimental data has not been inputed previously. Please use the method .experimentalDataCollector to input the data.')
 
         self.experimental_data = df
 
@@ -452,16 +460,18 @@ class PELEAnalyzer:
         ==========
         df : pandas.DataFrame
             Dataframe with the information of all the simulations. 
-        """   
+        """
 
-        docking_tool = df['docking_tool'].iloc[0] 
+        docking_tool = df['docking_tool'].iloc[0]
 
         if docking_tool == 'equibind':
 
             # Sorting data
-            df[['ligand', 'conformer']] = df['system'].str.split('-', expand=True).astype(int)
+            df[['ligand', 'conformer']] = df['system'].str.split(
+                '-', expand=True).astype(int)
 
-            groups = df.groupby(['docking_tool', 'forcefield', 'protein_part', 'perturbation', 'sampling'])
+            groups = df.groupby(
+                ['docking_tool', 'forcefield', 'protein_part', 'perturbation', 'sampling'])
 
             subset_list = [group for _, group in groups if len(group) > 1]
             dfs = []
@@ -480,12 +490,13 @@ class PELEAnalyzer:
                 dfs.append(final_df)
 
             print(' - {} simulations have failed.'.format(nan_lost))
-                
+
             combined_df = pd.concat(dfs, ignore_index=True)
 
-        else: 
-            raise Exception('DockingToolError: The docking tool used is {} not equibind'.format(docking_tool))    
-        
+        else:
+            raise Exception(
+                'DockingToolError: The docking tool used is {} not equibind'.format(docking_tool))
+
         print(' - Dataframe trimming performed successfully.')
 
         self.equibind_data = combined_df
@@ -495,7 +506,7 @@ class PELEAnalyzer:
         Generates all the folder hierarchy and calculates all the scores for all the 
         metrics in the PELE simulations. Then joins all this information into a dataframe.
         Lastly, merges the experimental data into this dataframe.
-        """    
+        """
 
         self._PELEDownloadsAssemble()
         folders_to_check = self._PELEFoldersToAnalyze()
@@ -507,51 +518,54 @@ class PELEAnalyzer:
         for dataset in folders_to_check:
             dataset_location = '/'.join(dataset.split('/')[2:])
 
-            for system in [x for x in os.listdir(dataset) if os.path.isdir(os.path.join(dataset,x))]:
+            for system in [x for x in os.listdir(dataset) if os.path.isdir(os.path.join(dataset, x))]:
                 cont += 1
-                path_system = os.path.join(dataset,system)
+                path_system = os.path.join(dataset, system)
 
                 if '-' in system:
-                    simulation_data_dict = self._energyCalculator(dataset_location, system, path_system)
+                    simulation_data_dict = self._energyCalculator(
+                        dataset_location, system, path_system)
                     all_data_dict[cont] = simulation_data_dict
                 else:
-                    simulation_data_dict = self._energyCalculator(dataset_location, int(system), path_system)
+                    simulation_data_dict = self._energyCalculator(
+                        dataset_location, int(system), path_system)
                     all_data_dict[cont] = simulation_data_dict
 
-        # Dataframe managing        
+        # Dataframe managing
         df_experimental = self.experimental_data
-        df_all_data = pd.DataFrame.from_dict(all_data_dict, orient='index').sort_values(by='system').reset_index(drop=True)
+        df_all_data = pd.DataFrame.from_dict(
+            all_data_dict, orient='index').sort_values(by='system').reset_index(drop=True)
         df_calculated = df_all_data.copy()
 
-        docking_tool = df_all_data['docking_tool'].iloc[0] 
+        docking_tool = df_all_data['docking_tool'].iloc[0]
 
         # Distinguishing docking tools
-        if docking_tool == 'equibind': 
+        if docking_tool == 'equibind':
 
             # Trimming equibind data
             self.equibindDataTrimming(df_all_data)
             df = self.equibind_data
 
             for index, row in df.iterrows():
-                system_value = row['ligand'] 
+                system_value = row['ligand']
 
                 if system_value in df_experimental.index:
-                    dg_value = df_experimental.loc[system_value, 'dG']  
+                    dg_value = df_experimental.loc[system_value, 'dG']
                     df.loc[index, 'dG'] = dg_value
 
             self.all_data = df
 
         else:
             for index, row in df_all_data.iterrows():
-                system_value = row['system'] 
+                system_value = row['system']
 
                 if system_value in df_experimental.index:
-                    dg_value = df_experimental.loc[system_value, 'dG']  
+                    dg_value = df_experimental.loc[system_value, 'dG']
                     df_all_data.loc[index, 'dG'] = dg_value
 
             self.all_data = df_all_data
 
-        self.calculated_data = df_calculated    
+        self.calculated_data = df_calculated
 
     def correlationPlotter(self, x_label, y_label, sampling, df=None):
         """
@@ -568,7 +582,7 @@ class PELEAnalyzer:
             Sampling used for these results.
         df : pandas.DataFrame
             Dataframe with the information the user wants to analyze. 
-        """   
+        """
 
         def plotter(df, x_label, y_label, sampling):
             """
@@ -582,7 +596,7 @@ class PELEAnalyzer:
                 Label of the dataframe's column you want to take as the x axis.
             sampling : str
                 Sampling used for these results.
-            """   
+            """
 
             x = df[x_label].to_numpy()
             y = df[y_label].to_numpy()
@@ -599,9 +613,10 @@ class PELEAnalyzer:
             # Set labels and title
             plt.xlabel('Z score experimental')
             plt.ylabel('Z score calculated')
-            plt.title('{x} vs. {y}: Z-score correlation {res_m}'.format(x=x_label, y=y_label, res_m=sampling))
+            plt.title(
+                '{x} vs. {y}: Z-score correlation {res_m}'.format(x=x_label, y=y_label, res_m=sampling))
             plt.plot(z_x, m_z*np.array(z_x) + n_z, color='orange',
-                    label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_z, p_z, len(x)))
+                     label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_z, p_z, len(x)))
             plt.legend(loc='best')
             plt.savefig(
                 '5_pele_analysis/images/{res_m}_{x}_{y}_zscore_correlation.png'.format(res_m=sampling, x=x_label, y=y_label), format='png')
@@ -614,9 +629,10 @@ class PELEAnalyzer:
             # Set labels and title
             plt.xlabel('Experimental')
             plt.ylabel('Calculated')
-            plt.title('{x} vs. {y}: correlation {res_m}'.format(x=x_label, y=y_label, res_m=sampling))
+            plt.title('{x} vs. {y}: correlation {res_m}'.format(
+                x=x_label, y=y_label, res_m=sampling))
             plt.plot(x, m*np.array(x) + n, color='orange',
-                    label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
+                     label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
             plt.legend(loc='best')
             plt.savefig(
                 '5_pele_analysis/images/{res_m}_{x}_{y}_correlation.png'.format(res_m=sampling, x=x_label, y=y_label), format='png')
@@ -629,7 +645,8 @@ class PELEAnalyzer:
             df = df_original.dropna()
             length_df_wo_NaN = len(df)
 
-            print(' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+            print(
+                ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
 
             # Creating a folder to store plots
             if not os.path.isdir('5_pele_analysis/images'):
@@ -637,7 +654,7 @@ class PELEAnalyzer:
 
             plotter(df, x_label, y_label, sampling)
 
-        else: 
+        else:
 
             # Dropping NaN rows.
             df_original = df
@@ -645,12 +662,11 @@ class PELEAnalyzer:
             df = df_original.dropna()
             length_df_wo_NaN = len(df)
 
-            print(' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+            print(
+                ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
 
             # Creating a folder to store plots
             if not os.path.isdir('5_pele_analysis/images'):
                 os.mkdir('5_pele_analysis/images')
 
             plotter(df, x_label, y_label, sampling)
-
-
