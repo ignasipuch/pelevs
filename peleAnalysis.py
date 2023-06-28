@@ -88,20 +88,75 @@ class PELEAnalyzer:
     
     def _energyCalculator(self, dataset_location, system, path_system):
         """
-        Merges receptor and ligand into a single file with the characteristics required by
-        PELE to work properly.
+        First, retrieves the characteristics of all the simulations performed (docking protocol, forcefield, protein part, 
+        perturbation level and rescoring). Second, for each individual simulation calculates scores of the different
+        metrics calculated in the PELE simulation. Third, unites all the data into a single dataframe to work with.
+
+        Scores calculated per simulation:
+        1. Binding Energy
+            be_min -> binding energy minimum
+            be_bz -> binding energy boltzmann weighted
+            be_p5 -> binding energy 5th percentile
+            be_p10 -> binding energy 10th percentile
+            be_p25 -> binding energy 25th percentile
+
+        2. Total energy
+            te_min -> total energy mimimum
+            te_bz -> total energy boltzmann weighted
+            te_p5 -> total energy 5th percentile
+            te_p10 -> total energy 10th percentile
+            te_p25 -> total energy 25th percentile
+
+        3. SASA
+            sasa_min -> sasa minimum
+            sasa_bz -> sasa boltzmann weighted
+            sasa_av -> sasa average
+            sasa_max -> sasa maximum
+
+        4. RMSD
+            rmsd_max -> rmsd maximum
+            rmsd_av -> rmsd average       
 
         Parameters
         ==========
         dataset_location : str
-            Path to the receptor file we want to merge.
+            Slice of the path of the whole dataset to retrieve all the characteristics of 
+            the simulation.
         system : str
-            Path to the ligand file we want to merge.
+            Name of the ligand containing the simulation that we are interested in.
         path_system : str
-            
+            Path to the simulation inside a dataset we are interested in.
+
+        Returns
+        ==========  
+        simulation_data_dict : dict
+            Dictionary with all the data of all the and all the scores calculated.      
         """
 
         def _PELEOptionsRetriever(dataset_location):
+            """
+            Retrieves the characteristics of all the simulations performed (docking protocol, forcefield, protein part, 
+            perturbation level and rescoring).
+
+            Parameters
+            ==========
+            dataset_location : str
+                Slice of the path of the whole dataset to retrieve all the characteristics of 
+                the simulation.
+
+            Returns
+            ==========  
+            docking_param : str
+                Docking tool used to generate initial positions for the simulation
+            forcefield_param : str
+                Force field used in the simulation. 
+            truncated_param : str
+                Protein part used in the simulation. 
+            perturbation_param : str
+                Perturbation protocol used in the simulation. 
+            rescorings_param : str
+                Sampling method used in the simulation.       
+            """
 
             # PELE options
             docking_tools = ['glide','rdock','equibind']
@@ -135,6 +190,26 @@ class PELEAnalyzer:
             return docking_param, forcefield_param, truncated_param, perturbation_param, rescorings_param
 
         def _energyInSimulation(path_system):
+            """
+            For each individual simulation calculates scores of the different
+            metrics calculated in the PELE simulation.
+
+            Parameters
+            ==========
+            path_system : str
+                Path to the simulation inside a dataset we are interested in.
+
+            Returns
+            ==========  
+            be_list : list
+                List with the different scores calculated for the binding energy.
+            te_list : list
+                List with the different scores calculated for the total energy.
+            sasa_list : list
+                List with the different scores calculated for the SASA.
+            rmsd_list : list
+                List with the different scores calculated for the RMSD.
+            """
 
             def minimum(vector):
                 return min(vector)
@@ -187,7 +262,6 @@ class PELEAnalyzer:
             def average(vector):
                 return np.average(vector)
             
-
             te = []
             be = []
             sasa = []
@@ -239,15 +313,14 @@ class PELEAnalyzer:
                 # SASA
                 sasa_min = minimum(sasa)
                 sasa_bz = boltzmann(sasa,te_n,298.)
-                sasa_p5 = p5(sasa)
-                sasa_p10 = p10(sasa)
-                sasa_p25 = p25(sasa)
+                sasa_av = average(sasa)
+                sasa_max = maximum(sasa)
 
-                sasa_list = [sasa_min,sasa_bz,sasa_p5,sasa_p10,sasa_p25]
+                sasa_list = [sasa_min,sasa_bz,sasa_av,sasa_max]
 
                 # RMSD
                 rmsd_max = maximum(rmsd)
-                rmsd_av = boltzmann(rmsd,te_n,298.)
+                rmsd_av = average(rmsd)
 
                 rmsd_list = [rmsd_max,rmsd_av]
 
@@ -255,7 +328,7 @@ class PELEAnalyzer:
 
                 be_list = 5*[np.NaN]
                 te_list = 5*[np.NaN]
-                sasa_list = 5*[np.NaN]
+                sasa_list = 4*[np.NaN]
                 rmsd_list = 2*[np.NaN]
 
             return be_list, te_list, sasa_list, rmsd_list
@@ -263,10 +336,41 @@ class PELEAnalyzer:
         def _resultsToDictionary(docking_param, forcefield_param, truncated_param, 
                                 perturbation_param, rescorings_param, system, 
                                 be_list, te_list, sasa_list, rmsd_list):
+            """
+            Joins all the data into a single dataframe with all the information.
+
+            Parameters
+            ==========
+            docking_param : str
+                Docking tool used to generate initial positions for the simulation
+            forcefield_param : str
+                Force field used in the simulation. 
+            truncated_param : str
+                Protein part used in the simulation. 
+            perturbation_param : str
+                Perturbation protocol used in the simulation. 
+            rescorings_param : str
+                Sampling method used in the simulation. 
+            system : str   
+                Name of the folder we are analyzing (name of the ligand).
+            be_list : list
+                List with the different scores calculated for the binding energy.
+            te_list : list
+                List with the different scores calculated for the total energy.
+            sasa_list : list
+                List with the different scores calculated for the SASA.
+            rmsd_list : list
+                List with the different scores calculated for the RMSD.  
+
+            Returns
+            ==========  
+            simulation_data_dict : dict
+                Dictionary with all the data of all the and all the scores calculated. 
+            """
             
             be_min, be_bz, be_p5, be_p10, be_p25 = be_list
             te_min, te_bz, te_p5, te_p10, te_p25 = te_list
-            sasa_min, sasa_bz, sasa_p5, sasa_p10, sasa_p25 = sasa_list
+            sasa_min, sasa_bz, sasa_av, sasa_max = sasa_list
             rmsd_max, rmsd_av = rmsd_list
 
             simulation_data_dict = {'docking_tool': docking_param,
@@ -287,9 +391,8 @@ class PELEAnalyzer:
                                     'te_p25': te_p25,
                                     'sasa_min': sasa_min,
                                     'sasa_bz': sasa_bz,
-                                    'sasa_p5': sasa_p5,
-                                    'sasa_p10': sasa_p10,
-                                    'sasa_p25': sasa_p25,
+                                    'sasa_av': sasa_av,
+                                    'sasa_max': sasa_max,
                                     'rmsd_max': rmsd_max,
                                     'rmsd_av': rmsd_av}
             
@@ -304,23 +407,52 @@ class PELEAnalyzer:
         return simulation_data_dict
 
     def experimentalDataCollector(self, path_experimental_data=None):
-        
+        """
+        Retrieves the experimental energetic data to be able to plot correlations.
+
+        Parameters
+        ==========
+        path_experimental_data : str
+            Path to the experimental data in case it has not been inputted previously 
+            in the pipeline.   
+        """      
+
         path_input_data = '1_input_files/experimental_energies'
 
-        if os.path.isdir(path_input_data):
-            experimental_data_file = [x for x in os.listdir(path_input_data) if x.endswith('.csv')][0]
-            path_input_experimental_data = os.path.join(path_input_data,experimental_data_file)
+        if path_experimental_data is not None:
+            if os.path.isfile(path_experimental_data):
+                df = pd.read_csv(path_experimental_data)
+                
+                if not os.path.isdir(path_input_data):
+                    os.mkdir(path_input_data)
 
-        if os.path.isfile(path_input_experimental_data):
-            df = pd.read_csv(path_input_experimental_data, index_col=0)
-        elif (path_experimental_data is not None) and (os.path.isfile(path_experimental_data)):
-            df = pd.read_csv(path_experimental_data)
-        else:
-            raise Exception('ExperimentalDataMissing: Experimental data should be located at {path_input} or be inputted with this method.'.format(path_input_experimental_data))
-            
+                shutil.move(path_experimental_data,path_input_data)
+            else:
+                print(' - Path inputed is not valid. Please check the path.')
+                print(' - Checking if experimental data has been inputted previously.')
+
+        elif path_experimental_data is None:
+            if os.path.isdir(path_input_data):
+                experimental_data_file = [x for x in os.listdir(path_input_data) if x.endswith('.csv')][0]
+                path_input_experimental_data = os.path.join(path_input_data,experimental_data_file)
+                df = pd.read_csv(path_input_experimental_data, index_col=0)
+                print(' - Experimental data found at {}'.format(path_input_experimental_data))
+            else:
+                raise Exception('MissingExperimentalData: The inputted path is not valid and experimental data has not been inputed previously. Please use the method .experimentalDataCollector to input the data.')
+
         self.experimental_data = df
 
     def equibindDataTrimming(self, df):
+        """
+        Selects the best scores for all the simulations performed with all the 
+        tautomers/stereoisomers from ligPrep. Selects simulations with best minimum 
+        Binding Energy.
+
+        Parameters
+        ==========
+        df : pandas.DataFrame
+            Dataframe with the information of all the simulations. 
+        """   
 
         docking_tool = df['docking_tool'].iloc[0] 
 
@@ -359,6 +491,11 @@ class PELEAnalyzer:
         self.equibind_data = combined_df
 
     def PELEDataCollector(self):
+        """
+        Generates all the folder hierarchy and calculates all the scores for all the 
+        metrics in the PELE simulations. Then joins all this information into a dataframe.
+        Lastly, merges the experimental data into this dataframe.
+        """    
 
         self._PELEDownloadsAssemble()
         folders_to_check = self._PELEFoldersToAnalyze()
@@ -417,8 +554,35 @@ class PELEAnalyzer:
         self.calculated_data = df_calculated    
 
     def correlationPlotter(self, x_label, y_label, sampling, df=None):
+        """
+        Makes plots with the x label and y label inputed by the user. By 
+        default uses the dataframe with all the data from all the simulations.
 
-        def plotter(df, x_label, y_label):
+        Parameters
+        ==========
+        x_label : str
+            Label of the dataframe's column you want to take as the x axis.
+        y_label : str
+            Label of the dataframe's column you want to take as the x axis.
+        sampling : str
+            Sampling used for these results.
+        df : pandas.DataFrame
+            Dataframe with the information the user wants to analyze. 
+        """   
+
+        def plotter(df, x_label, y_label, sampling):
+            """
+            Generates two plots: one with the original data and one with z-score.
+
+            Parameters
+            ==========
+            x_label : str
+                Label of the dataframe's column you want to take as the x axis.
+            y_label : str
+                Label of the dataframe's column you want to take as the x axis.
+            sampling : str
+                Sampling used for these results.
+            """   
 
             x = df[x_label].to_numpy()
             y = df[y_label].to_numpy()
@@ -471,7 +635,7 @@ class PELEAnalyzer:
             if not os.path.isdir('5_pele_analysis/images'):
                 os.mkdir('5_pele_analysis/images')
 
-            plotter(df, x_label, y_label)
+            plotter(df, x_label, y_label, sampling)
 
         else: 
 
@@ -487,6 +651,6 @@ class PELEAnalyzer:
             if not os.path.isdir('5_pele_analysis/images'):
                 os.mkdir('5_pele_analysis/images')
 
-            plotter(df, x_label, y_label)
+            plotter(df, x_label, y_label, sampling)
 
 
