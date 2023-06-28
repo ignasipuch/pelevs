@@ -23,8 +23,13 @@ class PELEAnalyzer:
         self._path_simulation = None
         self._path_analysis = None
         self.all_data = None
+        self.equibind_data = None
 
     def _PELEDownloadsAssemble(self):
+        """
+        Assembles all the data downloaded into a hierarchical folder
+        structure.
+        """
 
         # Generating paths
         docking_tools = ['glide', 'rdock', 'equibind']
@@ -54,6 +59,15 @@ class PELEAnalyzer:
         self._path_simulation = path_simulations
 
     def _PELEFoldersToAnalyze(self):
+        """
+        Determines which folders with a rescoring method name in it have to be 
+        taken into account to retrieve all the data from the reports.
+
+        Returns
+        =======
+        folders_to_check : list
+            List of paths with the directories to be checked.
+        """
 
         path_simulation = self._path_simulation
         path_analysis = self._path_analysis
@@ -73,6 +87,19 @@ class PELEAnalyzer:
         return folders_to_check
     
     def _energyCalculator(self, dataset_location, system, path_system):
+        """
+        Merges receptor and ligand into a single file with the characteristics required by
+        PELE to work properly.
+
+        Parameters
+        ==========
+        dataset_location : str
+            Path to the receptor file we want to merge.
+        system : str
+            Path to the ligand file we want to merge.
+        path_system : str
+            
+        """
 
         def _PELEOptionsRetriever(dataset_location):
 
@@ -245,7 +272,7 @@ class PELEAnalyzer:
             simulation_data_dict = {'docking_tool': docking_param,
                                     'forcefield': forcefield_param,
                                     'protein_part': truncated_param,
-                                    'pertrurbation': perturbation_param,
+                                    'perturbation': perturbation_param,
                                     'sampling': rescorings_param,
                                     'system': system,
                                     'be_min': be_min,
@@ -293,6 +320,44 @@ class PELEAnalyzer:
             
         self.experimental_data = df
 
+    def equibindDataTrimming(self, df):
+
+        docking_tool = df['docking_tool'].iloc[0] 
+
+        if docking_tool == 'equibind':
+
+            # Sorting data
+            df[['ligand', 'conformer']] = df['system'].str.split('-', expand=True).astype(int)
+
+            groups = df.groupby(['docking_tool', 'forcefield', 'protein_part', 'perturbation', 'sampling'])
+
+            subset_list = [group for _, group in groups if len(group) > 1]
+            dfs = []
+            nan_lost = 0
+
+            for subset in subset_list:
+                length_df = len(subset)
+                df = subset.dropna()
+                length_df_wo_NaN = len(df)
+
+                nan_lost += length_df - length_df_wo_NaN
+
+                df_sorted = df.sort_values(by='ligand')
+                df = df_sorted.drop_duplicates('ligand')
+                final_df = df.sort_values('ligand')
+                dfs.append(final_df)
+
+            print(' - {} simulations have failed.'.format(nan_lost))
+                
+            combined_df = pd.concat(dfs, ignore_index=True)
+
+        else: 
+            raise Exception('DockingToolError: The docking tool used is {} not equibind'.format(docking_tool))    
+        
+        print(' - Dataframe trimming performed successfully.')
+
+        self.equibind_data = combined_df
+
     def PELEDataCollector(self):
 
         self._PELEDownloadsAssemble()
@@ -308,19 +373,50 @@ class PELEAnalyzer:
             for system in [x for x in os.listdir(dataset) if os.path.isdir(os.path.join(dataset,x))]:
                 cont += 1
                 path_system = os.path.join(dataset,system)
-                simulation_data_dict = self._energyCalculator(dataset_location, int(system), path_system)
-                all_data_dict[cont] = simulation_data_dict
+
+                if '-' in system:
+                    simulation_data_dict = self._energyCalculator(dataset_location, system, path_system)
+                    all_data_dict[cont] = simulation_data_dict
+                else:
+                    simulation_data_dict = self._energyCalculator(dataset_location, int(system), path_system)
+                    all_data_dict[cont] = simulation_data_dict
 
         # Dataframe managing        
         df_experimental = self.experimental_data
         df_all_data = pd.DataFrame.from_dict(all_data_dict, orient='index').sort_values(by='system').reset_index(drop=True)
+        df_calculated = df_all_data.copy()
 
-        df_total = df_all_data.merge(df_experimental['dG'], left_index=True, right_index=True)
+        docking_tool = df_all_data['docking_tool'].iloc[0] 
 
-        self.calculated_data = df_all_data
-        self.all_data = df_total
+        # Distinguishing docking tools
+        if docking_tool == 'equibind': 
 
-    def correlationPlotter(self, x_label, y_label, df=None):
+            # Trimming equibind data
+            self.equibindDataTrimming(df_all_data)
+            df = self.equibind_data
+
+            for index, row in df.iterrows():
+                system_value = row['ligand'] 
+
+                if system_value in df_experimental.index:
+                    dg_value = df_experimental.loc[system_value, 'dG']  
+                    df.loc[index, 'dG'] = dg_value
+
+            self.all_data = df
+
+        else:
+            for index, row in df_all_data.iterrows():
+                system_value = row['system'] 
+
+                if system_value in df_experimental.index:
+                    dg_value = df_experimental.loc[system_value, 'dG']  
+                    df_all_data.loc[index, 'dG'] = dg_value
+
+            self.all_data = df_all_data
+
+        self.calculated_data = df_calculated    
+
+    def correlationPlotter(self, x_label, y_label, sampling, df=None):
 
         def plotter(df, x_label, y_label):
 
@@ -339,12 +435,12 @@ class PELEAnalyzer:
             # Set labels and title
             plt.xlabel('Z score experimental')
             plt.ylabel('Z score calculated')
-            plt.title('{x} vs. {y}: Z-score correlation'.format(x=x_label, y=y_label))
+            plt.title('{x} vs. {y}: Z-score correlation {res_m}'.format(x=x_label, y=y_label, res_m=sampling))
             plt.plot(z_x, m_z*np.array(z_x) + n_z, color='orange',
                     label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_z, p_z, len(x)))
             plt.legend(loc='best')
             plt.savefig(
-                '5_pele_analysis/images/{x}_{y}_zscore_correlation.png'.format(x=x_label, y=y_label), format='png')
+                '5_pele_analysis/images/{res_m}_{x}_{y}_zscore_correlation.png'.format(res_m=sampling, x=x_label, y=y_label), format='png')
 
             m, n, r, p, _ = linregress(x, y)
 
@@ -354,12 +450,12 @@ class PELEAnalyzer:
             # Set labels and title
             plt.xlabel('Experimental')
             plt.ylabel('Calculated')
-            plt.title('{x} vs. {y}: correlation'.format(x=x_label, y=y_label))
+            plt.title('{x} vs. {y}: correlation {res_m}'.format(x=x_label, y=y_label, res_m=sampling))
             plt.plot(x, m*np.array(x) + n, color='orange',
                     label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
             plt.legend(loc='best')
             plt.savefig(
-                '5_pele_analysis/images/{x}_{y}_correlation.png'.format(x=x_label, y=y_label), format='png')
+                '5_pele_analysis/images/{res_m}_{x}_{y}_correlation.png'.format(res_m=sampling, x=x_label, y=y_label), format='png')
 
         if df is None:
 
@@ -393,6 +489,4 @@ class PELEAnalyzer:
 
             plotter(df, x_label, y_label)
 
-        
 
-        
