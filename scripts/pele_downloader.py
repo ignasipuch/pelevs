@@ -205,6 +205,7 @@ def pele_reports_retriever(output_name):
         df.to_csv(csv_path, index=False)
 
         print(' - Total number of failed simulations: {}.'.format(len(failed_simulations)))
+        print(' - All data about failed simulations stored in failed_simulations.csv.')
 
     folders_to_check = folders_with_simulations(output_name)
     failed_simulations = dataset_retriever(output_name, folders_to_check)
