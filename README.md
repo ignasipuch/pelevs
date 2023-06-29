@@ -21,11 +21,11 @@ E --> F[Analysis]
 1. Target to inhibit prepared and in format pdb or mol2.
 2. Csv file with only SMILES and id of all the inhibitor ligands.
 
-**Module:** inputPrepare.py
+**- Module:** inputPrepare.py
 
-**Class:** InputPreparation
+**- Class:** InputPreparation
 
-**Methods:** setUpLigPrepJob
+**- Methods:** setUpLigPrepJob
 
 #### 1.1. Ligprep
 
@@ -40,15 +40,15 @@ Docking of the inhibitors to the target.
 **Modules:** 
 1. dockingJob.py 
 
-	**Class:** DockingJob
+	**- Class:** DockingJob
 	
-	**Methods:** setGlideDocking, setRdockDockingset, and EquibindDocking
+	**- Methods:** setGlideDocking, setRdockDockingset, and EquibindDocking
 	
 2. dockingAnalysis.py
 
-	**Class:** DockingAnalyzer
+	**- Class:** DockingAnalyzer
 
-	**Methods:** glideAnalysis, rdockAnalysis
+	**- Methods:** glideAnalysis, rdockAnalysis
 
 ---
 
@@ -56,16 +56,22 @@ Docking of the inhibitors to the target.
 
 Refinement of the docking pose obtained in the previous step in the pipeline.
 
-**Module:** peleJob.py
+**- Module:** peleJob.py
 
-**Class:** PELE
+**- Class:** PELE
 
-**Methods:** setGlideToPELESimulation, setRdockToPELESimulation, and setEquibindToPELESimulation
+**- Methods:** setGlideToPELESimulation, setRdockToPELESimulation, and setEquibindToPELESimulation
 
 ---
 
 ### 4. Analysis
 
-Part to analyze the results obteined in the PELE simulations.
+Part to analyze the results obtained in the PELE simulations.
+
+**- Module:** peleAnalysis.py
+
+**- Class:** PELEAnalyzer
+
+**- Methods:** experimentalDataCollector, equibindDataTrimming, PELEDataCollector, and correlationPlotter.
 
 ---
