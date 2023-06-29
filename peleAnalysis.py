@@ -4,11 +4,60 @@ import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
-import seaborn as sns
 
 
 class PELEAnalyzer:
+    """
+    Attributes
+    ==========
+    sampling : str
+        Sampling method chosen by the user.
+    protein_portion : str 
+        Selection of the protein with which PELE is going to
+        perform the simulation.
+    forcefield : str
+        Force-field used to perform the PELE simulation.
+    perturbation_protocol : str
+        Type of perturbation used in the PELE simulation.
+    docking_tool : str
+        Docking tool used to obtain the ligand poses.
+    experimental_data : pandas.DataFrame
+        Dataframe with the csv with experimental data
+    calculated_data : pandas.DataFrame
+        Dataframe with all the information form the simulations
+    _path_simulation : str
+        Path to store the simulations.
+    _path_analysis : str
+        Path to store the analysis made with the simulations.
+    all_data : pandas.DataFrame 
+        Dataframe with calculated and experimental data.
+    equibind_data : pandas.DataFrame
+        Dataframe with the selection of best poses according to 
+        the binding energy minimum.
 
+    Methods
+    =======
+    experimentalDataCollector(self, path_experimental_data=None)
+        Retrieve the lready inputed experimental data or manage newly inputed experimental data.
+    equibindDataTrimming(self, df)
+        Manage all the data from all the tautomer simulations to only keep thos with best PELE score.
+    PELEDataCollector(self)
+        Collect all the data from te simulations: options chosen and the scores calculated for all the 
+        metrics.
+    correlationPlotter(self, x_label, y_label, sampling, df=None)
+        Plot correlations between the y_label and x_label according to the data in df.
+
+    Hidden Methods
+    ==============
+    _PELEDownloadsAssemble(self)
+        Prepare necessary folders to store data and move the data to them.
+    _PELEFoldersToAnalyze(self)
+        Determine which directories have to be checked for simulations.
+    _energyCalculator(self, dataset_location, system, path_system)
+        Calculate all the scores of all the metric of all the simulations performed for
+        each rescoring method.
+    """
+    
     def __init__(self):
         """
         Initialize object and assign atributes.
