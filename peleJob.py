@@ -1,7 +1,6 @@
 import os
 import shutil
 from openbabel import openbabel as ob
-from Bio.PDB import PDBParser, PDBIO
 import re
 import pandas as pd
 
@@ -336,20 +335,21 @@ class PELE:
 
             file_mod_prot = receptor.split('.pdb')[0] + '_mod.pdb'
 
-            # Assigning a random residue number.
-            parser = PDBParser()
-            io = PDBIO()
+            with open(receptor, 'r') as pdb_file:
+                lines = pdb_file.readlines()
 
-            structure_prot = parser.get_structure('prot', receptor)
+            modified_lines = []
+            residue_index = 1000
 
-            index = 1000
+            for line in lines:
+                if line.startswith('ATOM'):
+                    line = line[:22] + str(residue_index) + line[26:]
+                    residue_index += 1
+                modified_lines.append(line)
 
-            for res in structure_prot.get_residues():
-                res.id = (' ', index, ' ')
-                index += 1
-
-            io.set_structure(structure_prot)
-            io.save(file_mod_prot)
+            # Write the modified lines back to the PDB file
+            with open(file_mod_prot, 'w') as pdb_file:
+                pdb_file.writelines(modified_lines)
 
             # Counting number of atoms of the protein
             ligand_cont_num = 0
@@ -430,7 +430,8 @@ class PELE:
             path_files = os.path.dirname(ligand)
             writing_path = os.path.join(path_files, output_file)
 
-            os.system('obabel {receptor} {ligand} -O {output}'.format(
+            # Joining ligand and receptor and directing warnings to out.txt
+            os.system('obabel {receptor} {ligand} -O {output} 2> out.txt'.format(
                 receptor=receptor, ligand=ligand, output=writing_path))
 
             return writing_path
@@ -769,7 +770,8 @@ class PELE:
                         pele_simulation_path, ligand_name))
 
                 print(
-                    ' - Merging the {} ligands to the receptor.'.format(len(os.listdir(docked_ligands_path))))
+                    ' - Merging the {} ligands to the receptor...'.format(len(os.listdir(docked_ligands_path))))
+                
 
                 # Merging all the inputs
                 for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
@@ -781,6 +783,9 @@ class PELE:
                         ligand_folder_path) if x != receptor][0]
                     self._PDBMerger(os.path.join(ligand_folder_path, receptor), os.path.join(
                         ligand_folder_path, ligand))
+
+            # Deleting openbabel merging information.        
+            os.remove('out.txt')
 
             print(
                 ' - Generating yaml and run files.')
