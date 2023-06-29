@@ -229,8 +229,6 @@ class PELEAnalyzer:
                     Total energies of all the simulation.
                 - T : float
                     Temperature to perform the Boltzmann weights with.
-                - steps : list
-                    Steps associated to poses for all the simulation.
 
                 Returns
                 ----------
