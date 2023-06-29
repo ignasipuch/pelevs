@@ -340,12 +340,20 @@ class PELE:
 
             modified_lines = []
             residue_index = 1000
+            previous_residue = None
 
             for line in lines:
                 if line.startswith('ATOM'):
+                    residue_letters = line[17:20].strip()
+
+                    if residue_letters != previous_residue:
+                        residue_index += 1
+
                     line = line[:22] + str(residue_index) + line[26:]
-                    residue_index += 1
-                modified_lines.append(line)
+                    modified_lines.append(line)
+                    previous_residue = residue_letters
+
+                else: pass
 
             # Write the modified lines back to the PDB file
             with open(file_mod_prot, 'w') as pdb_file:
@@ -784,8 +792,9 @@ class PELE:
                     self._PDBMerger(os.path.join(ligand_folder_path, receptor), os.path.join(
                         ligand_folder_path, ligand))
 
-            # Deleting openbabel merging information.        
-            os.remove('out.txt')
+            # Deleting openbabel merging information.  
+            if os.path.isfile('out.txt'):
+                os.remove('out.txt')
 
             print(
                 ' - Generating yaml and run files.')
