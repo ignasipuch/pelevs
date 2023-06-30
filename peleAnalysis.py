@@ -479,6 +479,7 @@ class PELEAnalyzer:
 
                 shutil.move(path_experimental_data, path_input_data)
             else:
+                print('is not file')
                 print(' - Path inputed is not valid. Please check the path.')
                 print(' - Checking if experimental data has been inputted previously.')
 
@@ -614,7 +615,7 @@ class PELEAnalyzer:
 
         self.calculated_data = df_calculated
 
-    def correlationPlotter(self, x_label, y_label, sampling, df=None):
+    def correlationPlotter(self, x_label, y_label, sampling, x_range=None, y_range=None, df=None):
         """
         Makes plots with the x label and y label inputed by the user. By 
         default uses the dataframe with all the data from all the simulations.
@@ -684,6 +685,41 @@ class PELEAnalyzer:
             plt.savefig(
                 '5_pele_analysis/images/{res_m}_{x}_{y}_correlation.png'.format(res_m=sampling, x=x_label, y=y_label), format='png')
 
+        def data_selection(df, x_label, y_label, x_range, y_range):
+            """
+            Trims the dataframe to make the data fit certain ranges.
+
+            Parameters
+            ==========
+            df : pandas.DataFrame
+                Dataframe with the information the user wants to analyze. 
+            x_label : str
+                Label of the dataframe's column you want to take as the x axis.
+            y_label : str
+                Label of the dataframe's column you want to take as the x axis.
+            x_range : str
+                Range where there can be data in the x-axis
+            y_range : str
+                Range where there can be data in the y-axis
+            """
+
+            if x_range is not None:
+
+                length_before_x = len(df)
+                df = df[(df[x_label] >= x_range[0]) & (df[x_label] < x_range[1])]
+                length_after_x = len(df)
+
+                print(' - {} data points deleted after x-axis trimming.'.format(length_before_x-length_after_x))
+
+            if y_range is not None:
+
+                length_before_y = len(df)
+                df = df[(df[y_label] >= y_range[0]) & (df[y_label] < y_range[1])]
+                length_after_y = len(df)
+                print(' - {} data points deleted after y-axis trimming.'.format(length_before_y-length_after_y))
+
+            return df
+
         if df is None:
 
             # Dropping NaN rows.
@@ -694,6 +730,9 @@ class PELEAnalyzer:
 
             print(
                 ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+            
+            if (x_range is not None) or (y_range is not None):
+                df = data_selection(df, x_label, y_label, x_range, y_range)
 
             # Creating a folder to store plots
             if not os.path.isdir('5_pele_analysis/images'):
@@ -711,6 +750,9 @@ class PELEAnalyzer:
 
             print(
                 ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+            
+            if (x_range is not None) or (y_range is not None):
+                df = data_selection(df, x_label, y_label, x_range, y_range)
 
             # Creating a folder to store plots
             if not os.path.isdir('5_pele_analysis/images'):
