@@ -1095,7 +1095,7 @@ class PELE:
             # Generating paths
             docked_jobs_origin = '3_docking_job/job/equibind_results'
             docked_jobs_destination = '4_pele_simulation/docking_input/ligands'
-            receptor_origin = '3_docking_job/job/equibind_calculations'
+            receptor_origin = '3_docking_job'
             receptor_destination = '4_pele_simulation/docking_input/receptor'
             pele_simulation_path = simulation_path
 
@@ -1113,14 +1113,12 @@ class PELE:
                     os.mkdir(os.path.join(pele_simulation_path, conformer))
 
             # Copying receptor
-            receptor_folder = [x for x in os.listdir(
-                receptor_origin) if os.path.isdir(os.path.join(receptor_origin, x))][0]
-            receptor = [x for x in os.listdir(os.path.join(
-                receptor_origin, receptor_folder)) if x.endswith('_protein.pdb')][0]
+            receptor = [x for x in os.listdir(receptor_origin) if x.endswith('.pdb')][0]
+            print(' - Reference receptor: {}'.format(os.path.join(receptor_origin,receptor)))
 
             if not os.path.isdir(receptor_destination):
                 os.mkdir(receptor_destination)
-                shutil.copy(os.path.join(receptor_origin, receptor_folder, receptor), os.path.join(
+                shutil.copy(os.path.join(receptor_origin, receptor), os.path.join(
                     receptor_destination, '{}.pdb'.format('receptor')))
 
         def _equibindPELEInputGenerator(previous_simulation_bool, simulation_path, force_field, truncated, perturbation_protocol, rescoring_method):
