@@ -176,7 +176,7 @@ class DockingAnalyzer:
                 prev_value = row['i_i_glide_lignum']
             modified_i_i_glide_lignum[i] = row['i_i_glide_lignum'] - prev_value
 
-        df.insert(2, 'conformation', modified_i_i_glide_lignum + 1)
+        df.insert(2, 'conformer', modified_i_i_glide_lignum + 1)
 
         df.to_csv('3_docking_job/Glide_whole_dataset.csv')
 
