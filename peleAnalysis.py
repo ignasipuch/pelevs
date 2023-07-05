@@ -546,7 +546,9 @@ class PELEAnalyzer:
                 'DockingToolError: The docking tool used is {} not equibind'.format(docking_tool))
 
         print(' - Dataframe trimming performed successfully.')
+        print(' - Information stored in 5_pele_analysis/Equibind_dataset.csv')
 
+        combined_df.to_csv('5_pele_analysis/Equibind_dataset.csv', index=False)
         self.equibind_data = combined_df
 
     def PELEDataCollector(self):
