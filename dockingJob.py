@@ -179,12 +179,22 @@ class DockingJob:
             File name of the complexed structure
         """
 
-        if not os.path.isdir('3_docking_job/rdockScore'):
-            os.mkdir('3_docking_job/rdockScore')
-
-        shutil.copy(complete_structure, '3_docking_job/rdockScore') 
-
         def split_pdb(complete_structure, receptor_file, ligand_file, reference_ligand):
+            """
+            Splits the complex file into ligand, reference ligand, and receptor.
+
+            Parameters
+            ==========
+            complete_structure : str
+                File name of the complexed structure.
+            receptor_file : str
+                File name of the receptor structure.
+            ligand_file : str
+                File name of the ligand structure.
+            reference_ligand : str
+                File name of the reference ligand structure.
+            """
+
             parser = PDBParser()
             structure = parser.get_structure('structure', complete_structure)
 
@@ -214,10 +224,15 @@ class DockingJob:
             self.reference_ligand = ligand_model
             self.receptor = receptor_model
 
-        input_pdb_file = os.path.join('3_docking_job/rdockScore', complete_structure)
-        receptor_pdb_file = "3_docking_job/rdockScore/receptor.pdb"
-        ligand_pdb_file = "3_docking_job/rdockScore/ligand.pdb"
-        reference_ligand_pdb_file = "3_docking_job/rdockScore/reference_ligand.pdb" 
+        if not os.path.isdir('3_docking_job/rdock_score'):
+            os.mkdir('3_docking_job/rdock_score')
+
+        shutil.copy(complete_structure, '3_docking_job/rdock_score') 
+
+        input_pdb_file = os.path.join('3_docking_job/rdock_score', complete_structure)
+        receptor_pdb_file = "3_docking_job/rdock_score/receptor.pdb"
+        ligand_pdb_file = "3_docking_job/rdock_score/ligand.pdb"
+        reference_ligand_pdb_file = "3_docking_job/rdock_score/reference_ligand.pdb" 
 
         split_pdb(input_pdb_file, receptor_pdb_file, ligand_pdb_file, reference_ligand_pdb_file)
 
@@ -321,7 +336,7 @@ class DockingJob:
         
         if protocol == 'score':
             parameter_file = os.path.join(
-                '3_docking_job/rdockScore', 'parameter_file.prm')
+                '3_docking_job/rdock_score', 'parameter_file.prm')
 
             if not os.path.isfile(parameter_file):
                 with open(parameter_file, 'w') as fileout:
@@ -367,7 +382,7 @@ class DockingJob:
                 )
         
         elif protocol == 'score':
-           with open('3_docking_job/rdockScore/grid.sh', 'w') as fileout:
+           with open('3_docking_job/rdock_score/grid.sh', 'w') as fileout:
                 fileout.writelines(
                     'module load rdock\n'
                     'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
@@ -419,7 +434,7 @@ class DockingJob:
                 )
         
         if protocol == 'score':
-           if not os.path.isfile('3_docking_job/rdockScore/splitMols.sh'):
+           if not os.path.isfile('3_docking_job/rdock_score/splitMols.sh'):
                 with open('3_docking_job/rdockScore/splitMols.sh', 'w') as filein:
                     filein.writelines(
                         '#!/bin/bash\n'
@@ -445,7 +460,6 @@ class DockingJob:
                         'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
                             ligands_file=ligands, cpus=cpus_docking)
                     ) 
-
     
     def _rdockRunFilesGenerator(self, cpus_docking, protocol):
         """
@@ -752,13 +766,15 @@ class DockingJob:
 
         self.reference_ligand = reference_ligand
         self.docking_tool = 'rdock'
+        protocol = 'dock'
 
         self._rdockReceptorFormatChecker(self.receptor)
         self._rdockFileCopier(reference_ligand)
-        self._rdockParamFilesWriter(self.receptor, self.reference_ligand)
-        self._rdockGridGenerator()
-        self._rdockJobSplitter(ligands, cpus_docking)
-        self._rdockRunFilesGenerator(cpus_docking)
+
+        self._rdockParamFilesWriter(self.receptor, self.reference_ligand, protocol)
+        self._rdockGridGenerator(protocol)
+        self._rdockJobSplitter(ligands, cpus_docking, protocol)
+        self._rdockRunFilesGenerator(cpus_docking, protocol)
 
     def setEquibindDocking(self, ligands, receptor):
         """
@@ -779,11 +795,22 @@ class DockingJob:
         self._equibindFolderPreparation(receptor)
         self._equibindFilesPreparation()
 
-    def rdockRescore(self, complete_structure, protocol, cpus_docking):
+    def rdockRescore(self, complete_structure):
+        """
+        Prepare the job folder to send an rDock rescoring job.
 
+        Parameters
+        ==========
+        complete_structure : str
+            File of the structure to rescore.
+        """
+
+        protocol = 'dock'
+        cpus_docking = 1
         self.docking_tool = 'rdock'
 
         self._rdockRescorePreparation(complete_structure)
+
         self._rdockParamFilesWriter(self.receptor, self.reference_ligand, protocol)
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
