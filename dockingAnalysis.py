@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import csv
+from rdkit import Chem
+from rdkit.Chem.Descriptors import ExactMolWt
 
 
 class DockingAnalyzer:
@@ -74,6 +76,7 @@ class DockingAnalyzer:
         self.docking_tool = None
         self.experimental_data = None
         self.calculated_data = None
+        self.molecular_weight = None
 
     def _correlationPlotter(self, x, y, docking_method):
         """
@@ -128,6 +131,108 @@ class DockingAnalyzer:
         plt.savefig(
             '3_docking_job/images/{}_correlation.png'.format(docking_method), format='png')
 
+    def _molecularWeightCalculator(self):
+        ''''
+        Calculate molecular weights of the ligands to dock and stores the 
+        values in a csv.
+        '''
+
+        def calculate_molecular_weight(smiles):
+            ''''
+            Compute the molecular weight per SMILE.
+
+            Parameters
+            ==========
+
+            smiles : str
+                String with the smiles corresponding to a molecule.
+            '''
+            
+            mol = Chem.MolFromSmiles(smiles)
+            return ExactMolWt(mol)
+
+        path = '1_input_files/molecular_weight'
+
+        if not os.path.isdir(path):
+            os.mkdir(path)
+
+        ligand_file = os.listdir('1_input_files/ligands/')[0]
+        df = pd.read_csv(os.path.join('1_input_files/ligands/',ligand_file), header=None)
+        
+        molecular_weights = df.iloc[:, 0].apply(calculate_molecular_weight)
+        new_df = pd.DataFrame({'ligand': df.index, 'molecular_weight': molecular_weights})
+
+        new_df.to_csv(os.path.join(path,'molecular_weight.csv'))
+
+        self.molecular_weight = new_df
+
+        # Histogram plot
+        plt.figure()
+        sns.histplot(data=new_df, x='molecular_weight', kde=True, stat='density', alpha=0.5)
+        plt.xlabel('MW (Da)')
+        plt.ylabel('Density')
+        plt.title('MW Distribution')
+        plt.savefig('3_docking_job/images/mw_distribution.png', format='png')
+
+
+    def _doubleCorrelationPlotter(self, experimental, calculated, molecular_weights, docking_method):
+        """
+        Makes a scatter plot of the two first vectors against the third with z-score
+        and finds the correlation between them.
+
+        Parameters
+        ==========
+        experimental : np.array
+            Array with the experimental scores of the ligands.
+        calculated : np.array
+            Array with the rdock scores of the ligands.
+        molecular_weights : np.array
+            Array with molecular weights of the ligands.
+        docking_method : str
+            Method with which the values have been obtained.
+        """
+
+        # Creating a folder to store plots
+        if not os.path.isdir('3_docking_job/images'):
+            os.mkdir('3_docking_job/images')
+
+        # Calculate z-scores for x and y
+        z_mw = (molecular_weights - np.mean(molecular_weights)) / np.std(molecular_weights)
+        z_exp = (experimental - np.mean(experimental)) / np.std(experimental)
+        z_cal = (calculated - np.mean(calculated)) / np.std(calculated)
+
+        m_exp, n_exp, r_exp, p_exp, _ = linregress(z_mw, z_exp)
+        m_cal, n_cal, r_cal, p_cal, _ = linregress(z_mw, z_cal)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+
+        # Left subplot
+        ax1.set_xlabel('Z score MW')
+        ax1.set_ylabel('Z score energy')
+        ax1.set_title('MW vs experimental: Z-score correlation')
+        ax1.scatter(z_mw, z_exp, label='experimental')
+        ax1.plot(z_mw, m_exp*np.array(z_mw) + n_exp, color='orange',
+                label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_exp, p_exp, len(z_mw)))
+        ax1.legend(loc='best')
+
+        y_min = min(ax1.get_ylim()[0], ax2.get_ylim()[0])
+        y_max = max(ax1.get_ylim()[1], ax2.get_ylim()[1])
+        ax1.set_ylim(y_min, y_max)
+        ax2.set_ylim(y_min, y_max)
+
+        # Right subplot
+        ax2.set_xlabel('Z score MW')
+        ax2.set_ylabel('Z score energy')
+        ax2.set_title(' MW vs {} score: Z-score correlation'.format(docking_method, docking_method))
+        ax2.scatter(z_mw, z_cal, marker='x', color='black', label='{}'.format(docking_method))
+        ax2.plot(z_mw, m_cal*np.array(z_mw) + n_cal, color='#a020f0', linestyle=':',
+         label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_cal, p_cal, len(z_mw)))    
+        ax2.legend(loc='best')
+
+        fig.suptitle('MW vs Energy', fontsize=16)  # General title for the entire figure
+        plt.tight_layout() 
+        plt.savefig('3_docking_job/images/{}_mw_zscore_correlation.png'.format(docking_method), format='png')
+
     def _glideDockingResultsChecker(self):
         """
         Checks if the results obtained with glide have been downloaded 
@@ -143,6 +248,8 @@ class DockingAnalyzer:
                 'ResultsMissingError: Before initializing the object the results must be downloaded and at {}'.format(path_docking))
 
         print(' - Glide docking results found')
+
+        self.docking_tool = 'glide'
 
     def _glideDataFrameRetriever(self):
         """
@@ -192,41 +299,6 @@ class DockingAnalyzer:
 
         self.calculated_data = df
 
-    def _glideCorrelation(self, experimental_data, column_name):
-        """
-        Uses _correlationPlotter to plot the calculated vs the
-        experimental values of the energies involved in a 
-        glide docking.
-
-        Parameters
-        ==========
-        experimental_data : str
-            Name of the csv file with the experimental data.
-        column_name : str
-            Name of the column where the data in the csv is stored.
-        """
-
-        file_name = experimental_data.split('/')[-1]
-
-        # Move experimental data to input data
-        if not os.path.isdir('1_input_files/experimental_energies'):
-            os.mkdir('1_input_files/experimental_energies')
-            shutil.move(file_name, '1_input_files/experimental_energies/')
-
-        df_experimental = pd.read_csv(os.path.join(
-            '1_input_files/experimental_energies/', file_name), index_col=0)
-        df_calculated = self.calculated_data
-
-        self.experimental_data = df_experimental
-
-        x = df_experimental[column_name].to_numpy()
-        y = df_calculated.r_i_glide_gscore.to_numpy()
-
-        self._correlationPlotter(x, y, 'glide')
-
-        print(' - Correlation image generated succesfully')
-        print(' - Image stored at 3_docking_job/images\n')
-
     def _glideTimePlotter(self):
         """
         Makes a histogram plot to show the distribution of times 
@@ -256,7 +328,6 @@ class DockingAnalyzer:
             '3_docking_job/images/glide_time_distribution.png', format='png')
 
         print(' - Time distribution figure plotted correctly.')
-        print()
 
     def _rdockDockingResultsChecker(self):
         """
@@ -271,6 +342,8 @@ class DockingAnalyzer:
         if len(path_results) == 0 and path_results[0].endswith('sd'):
             raise Exception(
                 'ResultsMissingError: Before initializing the object the results must be downloaded and located at {}'.format(path_docking))
+        
+        self.docking_tool = 'rdock'
 
     def _rdockDataFrameGenerator(self):
         """
@@ -351,11 +424,10 @@ class DockingAnalyzer:
 
         self.calculated_data = final_df
 
-    def _rdockCorrelation(self, experimental_data, column_name):
+    def _correlation(self, experimental_data, column_name):
         """
         Uses _correlationPlotter to plot the calculated vs the
-        experimental values of the energies involved in a 
-        rdock docking.
+        experimental values of the energies involved in a docking.
 
         Parameters
         ==========
@@ -375,16 +447,24 @@ class DockingAnalyzer:
         df_experimental = pd.read_csv(os.path.join(
             '1_input_files/experimental_energies/', file_name), index_col=0)
         df_calculated = self.calculated_data
+        df_mw = self.molecular_weight
 
         self.experimental_data = df_experimental
 
         x = df_experimental[column_name].to_numpy()
-        y = df_calculated.rdock_score.to_numpy()
+        mw = df_mw.iloc[:,1].to_numpy()
 
-        self._correlationPlotter(x, y, 'rdock')
+        if self.docking_tool == 'rdock':
+            y = df_calculated.rdock_score.to_numpy()
+        elif self.docking_tool == 'glide':
+            y = df_calculated.r_i_glide_gscore.to_numpy()
+
+        self._correlationPlotter(x, y, self.docking_tool)
+        self._doubleCorrelationPlotter(x, y, mw,self.docking_tool)
 
         print(' - Correlation image generated succesfully')
-        print(' - Image stored at 3_docking_job/images\n')
+        print(' - Molecular weight plots generated succesfully.')
+        print(' - Images stored at 3_docking_job/images\n')
 
     def glideAnalysis(self, experimental_data, column_name):
         """
@@ -403,7 +483,8 @@ class DockingAnalyzer:
 
         self._glideDockingResultsChecker()
         self._glideDataFrameRetriever()
-        self._glideCorrelation(experimental_data, column_name)
+        self._molecularWeightCalculator()
+        self._correlation(experimental_data, column_name)
         self._glideTimePlotter()
 
     def rdockAnalysis(self, experimental_data, column_name):
@@ -423,4 +504,5 @@ class DockingAnalyzer:
         self._rdockDockingResultsChecker()
         self._rdockDataFrameGenerator()
         self._rdockDataFrameTrimmer()
-        self._rdockCorrelation(experimental_data, column_name)
+        self._molecularWeightCalculator()
+        self._correlation(experimental_data, column_name)
