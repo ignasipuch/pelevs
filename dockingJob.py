@@ -1,4 +1,5 @@
 from openbabel import pybel
+from Bio.PDB import PDBParser, PDBIO
 import os
 import shutil
 
@@ -168,6 +169,58 @@ class DockingJob:
         print(' - Glide job generated successfully with grid {grid} and forcefield {ff}.'.format(
             grid=grid_file, ff=forcefield))
 
+    def _rdockRescorePreparation(self, complete_structure):
+        """
+        Prepare the files for rDock Rescoring by splitting the complete structure into receptor and ligand
+
+        Parameters
+        ==========
+        complete_structure : str
+            File name of the complexed structure
+        """
+
+        if not os.path.isdir('3_docking_job/rdockScore'):
+            os.mkdir('3_docking_job/rdockScore')
+
+        shutil.copy(complete_structure, '3_docking_job/rdockScore') 
+
+        def split_pdb(complete_structure, receptor_file, ligand_file, reference_ligand):
+            parser = PDBParser()
+            structure = parser.get_structure('structure', complete_structure)
+
+            ligand_model = structure[0]['L']
+            receptor_model = structure[0].copy()
+            receptor_model.detach_child('L')
+
+            receptor_model_path = receptor_file.replace(".pdb", ".mol2")
+            with open(receptor_model_path, "w") as mol2_file:
+                writer = pybel.Outputfile("mol2", mol2_file)
+                writer.write(receptor_model)
+                writer.close()
+
+            ligand_model_path = ligand_file.replace(".pdb", ".sdf")
+            with open(ligand_model_path, "w") as sdf_file:
+                writer = pybel.Outputfile("sdf", sdf_file)
+                writer.write(ligand_model)
+                writer.close()
+
+            reference_ligand_path = reference_ligand.replace(".pdb", ".sdf")
+            with open(reference_ligand_path, "w") as reference_sdf_file:
+                writer = pybel.Outputfile("sdf", reference_sdf_file)
+                writer.write(ligand_model)
+                writer.close()
+
+            self.ligands = ligand_model
+            self.reference_ligand = ligand_model
+            self.receptor = receptor_model
+
+        input_pdb_file = os.path.join('3_docking_job/rdockScore', complete_structure)
+        receptor_pdb_file = "3_docking_job/rdockScore/receptor.pdb"
+        ligand_pdb_file = "3_docking_job/rdockScore/ligand.pdb"
+        reference_ligand_pdb_file = "3_docking_job/rdockScore/reference_ligand.pdb" 
+
+        split_pdb(input_pdb_file, receptor_pdb_file, ligand_pdb_file, reference_ligand_pdb_file)
+
     def _rdockReceptorFormatChecker(self, receptor):
         """
         Check receptor's format and transform it if necessary to mol2.
@@ -214,7 +267,7 @@ class DockingJob:
         shutil.copy('1_input_files/receptor/' +
                     self.receptor, '3_docking_job/job')
 
-    def _rdockParamFilesWriter(self, receptor, reference_ligand):
+    def _rdockParamFilesWriter(self, receptor, reference_ligand, protocol):
         """
         Writinf param file to run rDock simulations and cavity 
         generation.
@@ -230,53 +283,97 @@ class DockingJob:
 
         print(' - Using {} as reference ligand to generated cavity and grid.'.format(reference_ligand))
 
-        parameter_file = os.path.join(
-            '3_docking_job/job', 'parameter_file.prm')
+        if protocol == 'dock':
+            parameter_file = os.path.join(
+                '3_docking_job/job', 'parameter_file.prm')
 
-        if not os.path.isfile(parameter_file):
-            with open(parameter_file, 'w') as fileout:
-                fileout.writelines(
-                    'RBT_PARAMETER_FILE_V1.00\n'
-                    'TITLE rdock\n'
-                    '\n'
-                    'RECEPTOR_FILE ' +
-                    receptor.split('.pdb')[0] + '.mol2' + '\n'
-                    'RECEPTOR_FLEX 3.0\n'
-                    '\n'
-                    '##################################################################\n'
-                    '### CAVITY DEFINITION: REFERENCE LIGAND METHOD\n'
-                    '##################################################################\n'
-                    'SECTION MAPPER\n'
-                    '    SITE_MAPPER RbtLigandSiteMapper\n'
-                    '    REF_MOL ' + reference_ligand + '\n'
-                    '    RADIUS 6.0\n'
-                    '    SMALL_SPHERE 1.0\n'
-                    '    MIN_VOLUME 100\n'
-                    '    MAX_CAVITIES 1\n'
-                    '    VOL_INCR 0.0\n'
-                    '   GRIDSTEP 0.5\n'
-                    'END_SECTION\n'
-                    '\n'
-                    '#################################\n'
-                    '#CAVITY RESTRAINT PENALTY\n'
-                    '#################################\n'
-                    'SECTION CAVITY\n'
-                    '    SCORING_FUNCTION RbtCavityGridSF\n'
-                    '    WEIGHT 1.0\n'
-                    'END_SECTION\n')
+            if not os.path.isfile(parameter_file):
+                with open(parameter_file, 'w') as fileout:
+                    fileout.writelines(
+                        'RBT_PARAMETER_FILE_V1.00\n'
+                        'TITLE rdock\n'
+                        '\n'
+                        'RECEPTOR_FILE ' +
+                        receptor.split('.pdb')[0] + '.mol2' + '\n'
+                        'RECEPTOR_FLEX 3.0\n'
+                        '\n'
+                        '##################################################################\n'
+                        '### CAVITY DEFINITION: REFERENCE LIGAND METHOD\n'
+                        '##################################################################\n'
+                        'SECTION MAPPER\n'
+                        '    SITE_MAPPER RbtLigandSiteMapper\n'
+                        '    REF_MOL ' + reference_ligand + '\n'
+                        '    RADIUS 6.0\n'
+                        '    SMALL_SPHERE 1.0\n'
+                        '    MIN_VOLUME 100\n'
+                        '    MAX_CAVITIES 1\n'
+                        '    VOL_INCR 0.0\n'
+                        '   GRIDSTEP 0.5\n'
+                        'END_SECTION\n'
+                        '\n'
+                        '#################################\n'
+                        '#CAVITY RESTRAINT PENALTY\n'
+                        '#################################\n'
+                        'SECTION CAVITY\n'
+                        '    SCORING_FUNCTION RbtCavityGridSF\n'
+                        '    WEIGHT 1.0\n'
+                        'END_SECTION\n')
+        
+        if protocol == 'score':
+            parameter_file = os.path.join(
+                '3_docking_job/rdockScore', 'parameter_file.prm')
 
-    def _rdockGridGenerator(self):
+            if not os.path.isfile(parameter_file):
+                with open(parameter_file, 'w') as fileout:
+                    fileout.writelines(
+                        'RBT_PARAMETER_FILE_V1.00\n'
+                        'TITLE rdock\n'
+                        '\n'
+                        'RECEPTOR_FILE ' +
+                        receptor.split('.pdb')[0] + '.mol2' + '\n'
+                        'RECEPTOR_FLEX 3.0\n'
+                        '\n'
+                        '##################################################################\n'
+                        '### CAVITY DEFINITION: REFERENCE LIGAND METHOD\n'
+                        '##################################################################\n'
+                        'SECTION MAPPER\n'
+                        '    SITE_MAPPER RbtLigandSiteMapper\n'
+                        '    REF_MOL ' + reference_ligand + '\n'
+                        '    RADIUS 6.0\n'
+                        '    SMALL_SPHERE 1.0\n'
+                        '    MIN_VOLUME 100\n'
+                        '    MAX_CAVITIES 1\n'
+                        '    VOL_INCR 0.0\n'
+                        '   GRIDSTEP 0.5\n'
+                        'END_SECTION\n'
+                        '\n'
+                        '#################################\n'
+                        '#CAVITY RESTRAINT PENALTY\n'
+                        '#################################\n'
+                        'SECTION CAVITY\n'
+                        '    SCORING_FUNCTION RbtCavityGridSF\n'
+                        '    WEIGHT 1.0\n'
+                        'END_SECTION\n')
+
+    def _rdockGridGenerator(self, protocol):
         """
         Generate run file to generate cavity and grid for rDock.
         """
+        if protocol == 'dock':
+            with open('3_docking_job/job/grid.sh', 'w') as fileout:
+                fileout.writelines(
+                    'module load rdock\n'
+                    'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
+                )
+        
+        elif protocol == 'score':
+           with open('3_docking_job/rdockScore/grid.sh', 'w') as fileout:
+                fileout.writelines(
+                    'module load rdock\n'
+                    'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
+                ) 
 
-        with open('3_docking_job/job/grid.sh', 'w') as fileout:
-            fileout.writelines(
-                'module load rdock\n'
-                'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
-            )
-
-    def _rdockJobSplitter(self, ligands, cpus_docking):
+    def _rdockJobSplitter(self, ligands, cpus_docking, protocol):
         """
         Generate script and run files to split the sdf with N
         molecules between M cpus.
@@ -292,35 +389,65 @@ class DockingJob:
         print(' - Splitting {ligands_file}\'s molecules into {cpus} different files.'.format(
             ligands_file=ligands, cpus=cpus_docking))
 
+        if protocol == 'dock':
         # Generating split file
-        if not os.path.isfile('3_docking_job/job/splitMols.sh'):
-            with open('3_docking_job/job/splitMols.sh', 'w') as filein:
-                filein.writelines(
-                    '#!/bin/bash\n'
-                    '#Usage: splitMols.sh <input> #Nfiles <outputRoot>\n'
-                    'fname=$1\n'
-                    'nfiles=$2\n'
-                    'output=$3\n'
-                    'molnum=$(grep -c \'$$$$\' $fname)\n'
-                    'echo " - $molnum molecules found"\n'
-                    'echo " - Dividing \'$fname\' into $nfiles files"\n'
-                    'echo " "\n'
-                    'rawstep=`echo $molnum/$nfiles | bc -l`\n'
-                    'let step=$molnum/$nfiles\n'
-                    'if [ ! `echo $rawstep%1 | bc` == 0 ]; then\n'
-                    '        let step=$step+1;\n'
-                    'fi;\n'
-                    'sdsplit -$step -o$output $1\n'
+            if not os.path.isfile('3_docking_job/job/splitMols.sh'):
+                with open('3_docking_job/job/splitMols.sh', 'w') as filein:
+                    filein.writelines(
+                        '#!/bin/bash\n'
+                        '#Usage: splitMols.sh <input> #Nfiles <outputRoot>\n'
+                        'fname=$1\n'
+                        'nfiles=$2\n'
+                        'output=$3\n'
+                        'molnum=$(grep -c \'$$$$\' $fname)\n'
+                        'echo " - $molnum molecules found"\n'
+                        'echo " - Dividing \'$fname\' into $nfiles files"\n'
+                        'echo " "\n'
+                        'rawstep=`echo $molnum/$nfiles | bc -l`\n'
+                        'let step=$molnum/$nfiles\n'
+                        'if [ ! `echo $rawstep%1 | bc` == 0 ]; then\n'
+                        '        let step=$step+1;\n'
+                        'fi;\n'
+                        'sdsplit -$step -o$output $1\n'
+                    )
+
+            # Generating splitted ligand files
+            with open('3_docking_job/job/split.sh', 'w') as fileout:
+                fileout.writelines(
+                    'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
+                        ligands_file=ligands, cpus=cpus_docking)
                 )
+        
+        if protocol == 'score':
+           if not os.path.isfile('3_docking_job/rdockScore/splitMols.sh'):
+                with open('3_docking_job/rdockScore/splitMols.sh', 'w') as filein:
+                    filein.writelines(
+                        '#!/bin/bash\n'
+                        '#Usage: splitMols.sh <input> #Nfiles <outputRoot>\n'
+                        'fname=$1\n'
+                        'nfiles=$2\n'
+                        'output=$3\n'
+                        'molnum=$(grep -c \'$$$$\' $fname)\n'
+                        'echo " - $molnum molecules found"\n'
+                        'echo " - Dividing \'$fname\' into $nfiles files"\n'
+                        'echo " "\n'
+                        'rawstep=`echo $molnum/$nfiles | bc -l`\n'
+                        'let step=$molnum/$nfiles\n'
+                        'if [ ! `echo $rawstep%1 | bc` == 0 ]; then\n'
+                        '        let step=$step+1;\n'
+                        'fi;\n'
+                        'sdsplit -$step -o$output $1\n'
+                    )
 
-        # Generating splitted ligand files
-        with open('3_docking_job/job/split.sh', 'w') as fileout:
-            fileout.writelines(
-                'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
-                    ligands_file=ligands, cpus=cpus_docking)
-            )
+            # Generating splitted ligand files
+                with open('3_docking_job/rdockScore/split.sh', 'w') as fileout:
+                    fileout.writelines(
+                        'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
+                            ligands_file=ligands, cpus=cpus_docking)
+                    ) 
 
-    def _rdockRunFilesGenerator(self, cpus_docking):
+    
+    def _rdockRunFilesGenerator(self, cpus_docking, protocol):
         """
         Generate all the necessary runs to run an individual
         rDock simulation, to prepare the rDock simulation, and 
@@ -331,6 +458,9 @@ class DockingJob:
         reference_ligand : str
             File name of the ligand used to generate cavity 
             and grid for rDock.
+        
+        protocol : str
+            Name of the protocol to be used, it can be either dock or score
         """
 
         # Generating folders
@@ -339,51 +469,101 @@ class DockingJob:
 
         if not os.path.isdir('3_docking_job/job/results'):
             os.mkdir('3_docking_job/job/results')
+        
+        if protocol == 'dock':
+            # Generating run files
+            for i in range(1, cpus_docking+1):
+                with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
+                    fileout.writelines(
+                        '#!/bin/sh\n',
+                        '#SBATCH --job-name=rdock' + str(i) + ' \n',
+                        '#SBATCH --time=01:00:00\n',
+                        '#SBATCH --ntasks=1\n',
+                        '#SBATCH --output=rdock.out\n',
+                        '#SBATCH --error=rdock.err\n',
+                        '\n',
+                        'module load rdock\n',
+                        'module load ANACONDA/2019.10\n',
+                        'module load intel\n',
+                        'module load mkl\n',
+                        'module load impi\n',
+                        'module load gcc\n',
+                        'module load boost/1.64.0\n',
+                        '\n',
+                        '\n',
+                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
+                            val=i))
+            
+            with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
+                fileout.writelines(
+                    '#!/bin/bash\n'
+                    '# Run grid.sh\n\n'
+                    'echo \' \'\n'
+                    'echo \' - Generating grid and cavity\'\n'
+                    'echo \' - Loading rDock module:\'\n'
+                    'echo \' \'\n'
+                    'source grid.sh\n'
+                    'echo \' \'\n\n'
+                    '# Run split.sh\n'
+                    'echo \' - Splitting ligands\'\n'
+                    'source split.sh\n'
+                )
 
-        # Generating run files
-        for i in range(1, cpus_docking+1):
-            with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
-                fileout.writelines([
-                    '#!/bin/sh\n',
-                    '#SBATCH --job-name=rdock' + str(i) + ' \n',
-                    '#SBATCH --time=01:00:00\n',
-                    '#SBATCH --ntasks=1\n',
-                    '#SBATCH --output=rdock.out\n',
-                    '#SBATCH --error=rdock.err\n',
-                    '\n',
-                    'module load rdock\n',
-                    'module load ANACONDA/2019.10\n',
-                    'module load intel\n',
-                    'module load mkl\n',
-                    'module load impi\n',
-                    'module load gcc\n',
-                    'module load boost/1.64.0\n',
-                    '\n',
-                    '\n',
-                    'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
-                        val=i)
-                ])
+            with open('3_docking_job/job/rDock_run.sh', 'w') as fileout:
+                fileout.writelines(
+                    '#!/bin/bash\n'
+                    'for d in run*; do echo ${d}; sbatch ${d}; done'
+                )
 
-        with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
-            fileout.writelines(
-                '#!/bin/bash\n'
-                '# Run grid.sh\n\n'
-                'echo \' \'\n'
-                'echo \' - Generating grid and cavity\'\n'
-                'echo \' - Loading rDock module:\'\n'
-                'echo \' \'\n'
-                'source grid.sh\n'
-                'echo \' \'\n\n'
-                '# Run split.sh\n'
-                'echo \' - Splitting ligands\'\n'
-                'source split.sh\n'
-            )
 
-        with open('3_docking_job/job/rDock_run.sh', 'w') as fileout:
-            fileout.writelines(
-                '#!/bin/bash\n'
-                'for d in run*; do echo ${d}; sbatch ${d}; done'
-            )
+                
+        elif protocol == 'score':
+            # Generating run files
+            for i in range(1, cpus_docking+1):
+                with open('3_docking_job/rdockScore/run{}'.format(i), 'w') as fileout:
+                    fileout.writelines(
+                        '#!/bin/sh\n',
+                        '#SBATCH --job-name=rdock' + str(i) + ' \n',
+                        '#SBATCH --time=01:00:00\n',
+                        '#SBATCH --ntasks=1\n',
+                        '#SBATCH --output=rdock.out\n',
+                        '#SBATCH --error=rdock.err\n',
+                        '\n',
+                        'module load rdock\n',
+                        'module load ANACONDA/2019.10\n',
+                        'module load intel\n',
+                        'module load mkl\n',
+                        'module load impi\n',
+                        'module load gcc\n',
+                        'module load boost/1.64.0\n',
+                        '\n',
+                        '\n',
+                       'rbdock -i 3_docking_job/rdockScore/ligand.sdf -o results/ligand_out -r parameter_file.prm -p score.prm -allH\n'.format(
+                        val=i) 
+                    ) 
+
+                    
+
+            with open('3_docking_job/rdockScore/prepare_rDock_run.sh', 'w') as fileout:
+                fileout.writelines(
+                    '#!/bin/bash\n'
+                    '# Run grid.sh\n\n'
+                    'echo \' \'\n'
+                    'echo \' - Generating grid and cavity\'\n'
+                    'echo \' - Loading rDock module:\'\n'
+                    'echo \' \'\n'
+                    'source grid.sh\n'
+                    'echo \' \'\n\n'
+                    '# Run split.sh\n'
+                    'echo \' - Splitting ligands\'\n'
+                    'source split.sh\n'
+                )
+
+            with open('3_docking_job/rdockScore/rDock_run.sh', 'w') as fileout:
+                fileout.writelines(
+                    '#!/bin/bash\n'
+                    'for d in run*; do echo ${d}; sbatch ${d}; done'
+                )
 
         print(' - Job generated to be sent to MN4 machine.')
         print(' - RDock docking job generated successfully to run with {} cpus.'.format(cpus_docking))
@@ -598,3 +778,13 @@ class DockingJob:
         self._equibindSplitLigands(ligands)
         self._equibindFolderPreparation(receptor)
         self._equibindFilesPreparation()
+
+    def rdockRescore(self, complete_structure, protocol, cpus_docking):
+
+        self.docking_tool = 'rdock'
+
+        self._rdockRescorePreparation(complete_structure)
+        self._rdockParamFilesWriter(self.receptor, self.reference_ligand, protocol)
+        self._rdockGridGenerator(protocol)
+        self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
+        self._rdockRunFilesGenerator(cpus_docking, protocol)
