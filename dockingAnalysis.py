@@ -174,7 +174,6 @@ class DockingAnalyzer:
         plt.title('MW Distribution')
         plt.savefig('3_docking_job/images/mw_distribution.png', format='png')
 
-
     def _doubleCorrelationPlotter(self, experimental, calculated, molecular_weights, docking_method):
         """
         Makes a scatter plot of the two first vectors against the third with z-score
