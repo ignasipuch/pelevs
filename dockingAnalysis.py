@@ -147,7 +147,7 @@ class DockingAnalyzer:
             smiles : str
                 String with the smiles corresponding to a molecule.
             '''
-            
+
             mol = Chem.MolFromSmiles(smiles)
             return ExactMolWt(mol)
 
@@ -157,23 +157,25 @@ class DockingAnalyzer:
             os.mkdir(path)
 
         ligand_file = os.listdir('1_input_files/ligands/')[0]
-        df = pd.read_csv(os.path.join('1_input_files/ligands/',ligand_file), header=None)
-        
-        molecular_weights = df.iloc[:, 0].apply(calculate_molecular_weight)
-        new_df = pd.DataFrame({'ligand': df.index, 'molecular_weight': molecular_weights})
+        df = pd.read_csv(os.path.join(
+            '1_input_files/ligands/', ligand_file), header=None)
 
-        new_df.to_csv(os.path.join(path,'molecular_weight.csv'))
+        molecular_weights = df.iloc[:, 0].apply(calculate_molecular_weight)
+        new_df = pd.DataFrame(
+            {'ligand': df.index, 'molecular_weight': molecular_weights})
+
+        new_df.to_csv(os.path.join(path, 'molecular_weight.csv'))
 
         self.molecular_weight = new_df
 
         # Histogram plot
         plt.figure()
-        sns.histplot(data=new_df, x='molecular_weight', kde=True, stat='density', alpha=0.5)
+        sns.histplot(data=new_df, x='molecular_weight',
+                     kde=True, stat='density', alpha=0.5)
         plt.xlabel('MW (Da)')
         plt.ylabel('Density')
         plt.title('MW Distribution')
         plt.savefig('3_docking_job/images/mw_distribution.png', format='png')
-
 
     def _doubleCorrelationPlotter(self, experimental, calculated, molecular_weights, docking_method):
         """
@@ -197,7 +199,8 @@ class DockingAnalyzer:
             os.mkdir('3_docking_job/images')
 
         # Calculate z-scores for x and y
-        z_mw = (molecular_weights - np.mean(molecular_weights)) / np.std(molecular_weights)
+        z_mw = (molecular_weights - np.mean(molecular_weights)) / \
+            np.std(molecular_weights)
         z_exp = (experimental - np.mean(experimental)) / np.std(experimental)
         z_cal = (calculated - np.mean(calculated)) / np.std(calculated)
 
@@ -212,7 +215,7 @@ class DockingAnalyzer:
         ax1.set_title('MW vs experimental: Z-score correlation')
         ax1.scatter(z_mw, z_exp, label='experimental')
         ax1.plot(z_mw, m_exp*np.array(z_mw) + n_exp, color='orange',
-                label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_exp, p_exp, len(z_mw)))
+                 label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_exp, p_exp, len(z_mw)))
         ax1.legend(loc='best')
 
         y_min = min(ax1.get_ylim()[0], ax2.get_ylim()[0])
@@ -223,15 +226,19 @@ class DockingAnalyzer:
         # Right subplot
         ax2.set_xlabel('Z score MW')
         ax2.set_ylabel('Z score energy')
-        ax2.set_title(' MW vs {} score: Z-score correlation'.format(docking_method, docking_method))
-        ax2.scatter(z_mw, z_cal, marker='x', color='black', label='{}'.format(docking_method))
+        ax2.set_title(
+            ' MW vs {} score: Z-score correlation'.format(docking_method, docking_method))
+        ax2.scatter(z_mw, z_cal, marker='x', color='black',
+                    label='{}'.format(docking_method))
         ax2.plot(z_mw, m_cal*np.array(z_mw) + n_cal, color='#a020f0', linestyle=':',
-         label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_cal, p_cal, len(z_mw)))    
+                 label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_cal, p_cal, len(z_mw)))
         ax2.legend(loc='best')
 
-        fig.suptitle('MW vs Energy', fontsize=16)  # General title for the entire figure
-        plt.tight_layout() 
-        plt.savefig('3_docking_job/images/{}_mw_zscore_correlation.png'.format(docking_method), format='png')
+        # General title for the entire figure
+        fig.suptitle('MW vs Energy', fontsize=16)
+        plt.tight_layout()
+        plt.savefig(
+            '3_docking_job/images/{}_mw_zscore_correlation.png'.format(docking_method), format='png')
 
     def _glideDockingResultsChecker(self):
         """
@@ -342,7 +349,7 @@ class DockingAnalyzer:
         if len(path_results) == 0 and path_results[0].endswith('sd'):
             raise Exception(
                 'ResultsMissingError: Before initializing the object the results must be downloaded and located at {}'.format(path_docking))
-        
+
         self.docking_tool = 'rdock'
 
     def _rdockDataFrameGenerator(self):
@@ -452,7 +459,7 @@ class DockingAnalyzer:
         self.experimental_data = df_experimental
 
         x = df_experimental[column_name].to_numpy()
-        mw = df_mw.iloc[:,1].to_numpy()
+        mw = df_mw.iloc[:, 1].to_numpy()
 
         if self.docking_tool == 'rdock':
             y = df_calculated.rdock_score.to_numpy()
@@ -460,7 +467,7 @@ class DockingAnalyzer:
             y = df_calculated.r_i_glide_gscore.to_numpy()
 
         self._correlationPlotter(x, y, self.docking_tool)
-        self._doubleCorrelationPlotter(x, y, mw,self.docking_tool)
+        self._doubleCorrelationPlotter(x, y, mw, self.docking_tool)
 
         print(' - Correlation image generated succesfully')
         print(' - Molecular weight plots generated succesfully.')
