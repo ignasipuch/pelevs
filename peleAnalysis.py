@@ -510,6 +510,16 @@ class PELEAnalyzer:
             Dataframe with the information of all the simulations. 
         """
 
+        def equibindBestPoses(df):
+
+            df.sort_values(by="be_min", inplace=True)
+            df.drop_duplicates(subset="ligand", keep="first", inplace=True)
+            df.sort_values(by="ligand", inplace=True)
+            df.reset_index(drop=True, inplace=True)
+
+            print(' - Best poses stored in 5_pele_analysis/Equibind_best_poses.csv')
+            df.to_csv('5_pele_analysis/Equibind_best_poses.csv', index=False)
+
         docking_tool = df['docking_tool'].iloc[0]
 
         if docking_tool == 'equibind':
@@ -541,14 +551,15 @@ class PELEAnalyzer:
 
             combined_df = pd.concat(dfs, ignore_index=True)
 
+            equibindBestPoses(combined_df)
+
         else:
             raise Exception(
                 'DockingToolError: The docking tool used is {} not equibind'.format(docking_tool))
 
-        print(' - Dataframe trimming performed successfully.')
-        print(' - Information stored in 5_pele_analysis/Equibind_dataset.csv')
+        print(' - Information of all the simulation stored in 5_pele_analysis/Equibind_all_dataset.csv')
 
-        combined_df.to_csv('5_pele_analysis/Equibind_dataset.csv', index=False)
+        combined_df.to_csv('5_pele_analysis/Equibind_all_dataset.csv', index=False)
         self.equibind_data = combined_df
 
     def PELEDataCollector(self):
