@@ -77,7 +77,7 @@ def pele_reports_retriever(output_name):
             os.mkdir(output_name)
 
         folders_to_check = []
-        rescorings = ['xshort','short','long','xlong']
+        rescorings = ['xshort','short','long','xlong','xxlong']
         
         for root, _, _ in os.walk('pele_simulation/'):
 
