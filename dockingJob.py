@@ -267,6 +267,11 @@ class DockingJob:
         os.remove(ligand_pdb_file)
         os.remove(reference_ligand_pdb_file)
 
+        if not os.path.isdir('3_docking_job/rdockScore'):
+            os.mkdir('3_docking_job/rdockScore')
+
+        shutil.copy(complete_structure, '3_docking_job/rdockScore') 
+
     def _rdockReceptorFormatChecker(self, receptor):
         """
         Check receptor's format and transform it if necessary to mol2.
@@ -448,6 +453,7 @@ class DockingJob:
             ligands_file=ligands, cpus=cpus_docking))
 
         if protocol == 'dock':
+
             # Generating split file
             if not os.path.isfile('3_docking_job/job/splitMols.sh'):
                 with open('3_docking_job/job/splitMols.sh', 'w') as filein:
@@ -479,6 +485,7 @@ class DockingJob:
         if protocol == 'score':
             if not os.path.isfile('3_docking_job/rdock_score/splitMols.sh'):
                 with open('3_docking_job/rdock_score/splitMols.sh', 'w') as filein:
+
                     filein.writelines(
                         '#!/bin/bash\n'
                         '#Usage: splitMols.sh <input> #Nfiles <outputRoot>\n'
@@ -526,6 +533,45 @@ class DockingJob:
 
         if not os.path.isdir('3_docking_job/job/results'):
             os.mkdir('3_docking_job/job/results')
+        
+        if protocol == 'dock':
+            # Generating run files
+            for i in range(1, cpus_docking+1):
+                with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
+                    fileout.writelines(
+                        '#!/bin/sh\n',
+                        '#SBATCH --job-name=rdock' + str(i) + ' \n',
+                        '#SBATCH --time=01:00:00\n',
+                        '#SBATCH --ntasks=1\n',
+                        '#SBATCH --output=rdock.out\n',
+                        '#SBATCH --error=rdock.err\n',
+                        '\n',
+                        'module load rdock\n',
+                        'module load ANACONDA/2019.10\n',
+                        'module load intel\n',
+                        'module load mkl\n',
+                        'module load impi\n',
+                        'module load gcc\n',
+                        'module load boost/1.64.0\n',
+                        '\n',
+                        '\n',
+                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
+                            val=i))
+            
+            with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
+                fileout.writelines(
+                    '#!/bin/bash\n'
+                    '# Run grid.sh\n\n'
+                    'echo \' \'\n'
+                    'echo \' - Generating grid and cavity\'\n'
+                    'echo \' - Loading rDock module:\'\n'
+                    'echo \' \'\n'
+                    'source grid.sh\n'
+                    'echo \' \'\n\n'
+                    '# Run split.sh\n'
+                    'echo \' - Splitting ligands\'\n'
+                    'source split.sh\n'
+                )
 
         if protocol == 'dock':
             # Generating run files
@@ -853,6 +899,7 @@ class DockingJob:
 
         self._rdockParamFilesWriter(
             self.receptor, self.reference_ligand, protocol)
+        
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
         self._rdockRunFilesGenerator(cpus_docking, protocol)
