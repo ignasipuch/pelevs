@@ -1,4 +1,6 @@
+Bio==1.5.9
 matplotlib==3.7.2
+MDAnalysis==2.5.0
 numpy==1.17.4
 openbabel==3.1.1.1
 pandas==2.0.3
