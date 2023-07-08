@@ -205,7 +205,8 @@ class DockingJob:
             for chain in pdb.get_chains():
                 if chain.id == 'L':
                     ligand_chain = chain.id
-                else: receptor_chain = chain.id
+                else:
+                    receptor_chain = chain.id
 
             # Import the pdb file as universe
             u = MDAnalysis.Universe(complete_structure)
@@ -229,7 +230,7 @@ class DockingJob:
             """
 
             file = os.path.basename(file_in)
-            file_name, file_format = file.split('.')            
+            file_name, file_format = file.split('.')
 
             conv = ob.OBConversion()
             conv.SetInAndOutFormats(file_format, format_out)
@@ -241,18 +242,20 @@ class DockingJob:
         if not os.path.isdir('3_docking_job/rdock_score'):
             os.mkdir('3_docking_job/rdock_score')
 
-        shutil.copy(complete_structure, '3_docking_job/rdock_score') 
+        shutil.copy(complete_structure, '3_docking_job/rdock_score')
 
         # Splitting file name
         file_structure = os.path.basename(complete_structure)
 
-        input_pdb_file = os.path.join('3_docking_job/rdock_score', file_structure)
+        input_pdb_file = os.path.join(
+            '3_docking_job/rdock_score', file_structure)
         receptor_pdb_file = '3_docking_job/rdock_score/receptor.pdb'
         ligand_pdb_file = '3_docking_job/rdock_score/ligand.pdb'
-        reference_ligand_pdb_file = '3_docking_job/rdock_score/reference_ligand.pdb' 
+        reference_ligand_pdb_file = '3_docking_job/rdock_score/reference_ligand.pdb'
         path_output = '3_docking_job/rdock_score'
 
-        split_pdb(input_pdb_file, receptor_pdb_file, ligand_pdb_file, reference_ligand_pdb_file)
+        split_pdb(input_pdb_file, receptor_pdb_file,
+                  ligand_pdb_file, reference_ligand_pdb_file)
 
         # Converting
         conversor(receptor_pdb_file, 'mol2', path_output)
@@ -260,7 +263,9 @@ class DockingJob:
         conversor(reference_ligand_pdb_file, 'sdf', path_output)
 
         # Removing
-        os.remove(receptor_pdb_file); os.remove(ligand_pdb_file); os.remove(reference_ligand_pdb_file)
+        os.remove(receptor_pdb_file)
+        os.remove(ligand_pdb_file)
+        os.remove(reference_ligand_pdb_file)
 
     def _rdockReceptorFormatChecker(self, receptor):
         """
@@ -305,13 +310,16 @@ class DockingJob:
         reference_ligand_name = os.path.basename(reference_ligand)
 
         if os.path.isfile(reference_ligand):
-            shutil.copy(reference_ligand, os.path.join('1_input_files/ligands',reference_ligand_name))
-            shutil.move(reference_ligand, os.path.join('3_docking_job/job',reference_ligand_name))
+            shutil.copy(reference_ligand, os.path.join(
+                '1_input_files/ligands', reference_ligand_name))
+            shutil.move(reference_ligand, os.path.join(
+                '3_docking_job/job', reference_ligand_name))
         elif not os.path.isfile(reference_ligand):
-            if os.path.isfile(os.path.join('3_docking_job/job',reference_ligand_name)):
+            if os.path.isfile(os.path.join('3_docking_job/job', reference_ligand_name)):
                 pass
             else:
-                raise Exception('ReferenceLigandError: Tha path is not correct and it has not been found in 3_docking_job/job.')
+                raise Exception(
+                    'ReferenceLigandError: Tha path is not correct and it has not been found in 3_docking_job/job.')
 
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
         shutil.copy('1_input_files/receptor/' +
@@ -368,7 +376,7 @@ class DockingJob:
                         '    SCORING_FUNCTION RbtCavityGridSF\n'
                         '    WEIGHT 1.0\n'
                         'END_SECTION\n')
-        
+
         if protocol == 'score':
             parameter_file = os.path.join(
                 '3_docking_job/rdock_score', 'parameter_file.prm')
@@ -415,13 +423,13 @@ class DockingJob:
                     'module load rdock\n'
                     'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
                 )
-        
+
         elif protocol == 'score':
-           with open('3_docking_job/rdock_score/grid.sh', 'w') as fileout:
+            with open('3_docking_job/rdock_score/grid.sh', 'w') as fileout:
                 fileout.writelines(
                     'module load rdock\n'
                     'rbcavity -was -d -r parameter_file.prm > parameter_file.log\n'
-                ) 
+                )
 
     def _rdockJobSplitter(self, ligands, cpus_docking, protocol):
         """
@@ -440,7 +448,7 @@ class DockingJob:
             ligands_file=ligands, cpus=cpus_docking))
 
         if protocol == 'dock':
-        # Generating split file
+            # Generating split file
             if not os.path.isfile('3_docking_job/job/splitMols.sh'):
                 with open('3_docking_job/job/splitMols.sh', 'w') as filein:
                     filein.writelines(
@@ -467,9 +475,9 @@ class DockingJob:
                     'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
                         ligands_file=ligands, cpus=cpus_docking)
                 )
-        
+
         if protocol == 'score':
-           if not os.path.isfile('3_docking_job/rdock_score/splitMols.sh'):
+            if not os.path.isfile('3_docking_job/rdock_score/splitMols.sh'):
                 with open('3_docking_job/rdock_score/splitMols.sh', 'w') as filein:
                     filein.writelines(
                         '#!/bin/bash\n'
@@ -494,8 +502,8 @@ class DockingJob:
                     fileout.writelines(
                         'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
                             ligands_file=ligands, cpus=cpus_docking)
-                    ) 
-    
+                    )
+
     def _rdockRunFilesGenerator(self, cpus_docking, protocol):
         """
         Generate all the necessary runs to run an individual
@@ -507,7 +515,7 @@ class DockingJob:
         reference_ligand : str
             File name of the ligand used to generate cavity 
             and grid for rDock.
-        
+
         protocol : str
             Name of the protocol to be used, it can be either dock or score
         """
@@ -518,7 +526,7 @@ class DockingJob:
 
         if not os.path.isdir('3_docking_job/job/results'):
             os.mkdir('3_docking_job/job/results')
-        
+
         if protocol == 'dock':
             # Generating run files
             for i in range(1, cpus_docking+1):
@@ -542,7 +550,7 @@ class DockingJob:
                         '\n'
                         'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
                             val=i))
-            
+
             with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
                 fileout.writelines(
                     '#!/bin/bash\n'
@@ -564,8 +572,6 @@ class DockingJob:
                     'for d in run*; do echo ${d}; sbatch ${d}; done'
                 )
 
-
-                
         elif protocol == 'score':
             # Generating run files
             for i in range(1, cpus_docking+1):
@@ -587,9 +593,9 @@ class DockingJob:
                         'module load boost/1.64.0\n'
                         '\n'
                         '\n'
-                       'rbdock -i 3_docking_job/rdock_score/ligand.sdf -o results/ligand_out -r parameter_file.prm -p score.prm -allH\n'.format(
-                        val=i) 
-                    )                     
+                        'rbdock -i 3_docking_job/rdock_score/ligand.sdf -o results/ligand_out -r parameter_file.prm -p score.prm -allH\n'.format(
+                            val=i)
+                    )
 
             with open('3_docking_job/rdock_score/prepare_rDock_run.sh', 'w') as fileout:
                 fileout.writelines(
@@ -804,7 +810,8 @@ class DockingJob:
         self._rdockReceptorFormatChecker(self.receptor)
         self._rdockFileCopier(reference_ligand)
 
-        self._rdockParamFilesWriter(self.receptor, self.reference_ligand, protocol)
+        self._rdockParamFilesWriter(
+            self.receptor, self.reference_ligand, protocol)
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(ligands, cpus_docking, protocol)
         self._rdockRunFilesGenerator(cpus_docking, protocol)
@@ -844,7 +851,8 @@ class DockingJob:
 
         self._rdockRescorePreparation(complete_structure)
 
-        self._rdockParamFilesWriter(self.receptor, self.reference_ligand, protocol)
+        self._rdockParamFilesWriter(
+            self.receptor, self.reference_ligand, protocol)
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
         self._rdockRunFilesGenerator(cpus_docking, protocol)
