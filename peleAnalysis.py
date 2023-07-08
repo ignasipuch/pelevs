@@ -123,7 +123,7 @@ class PELEAnalyzer:
         path_analysis = self._path_analysis
 
         folders_to_check = []
-        rescorings = ['xshort', 'short', 'long', 'xlong']
+        rescorings = ['xshort', 'short', 'long', 'xlong', 'xxlong']
 
         for root, _, _ in os.walk(path_simulation):
 
@@ -213,7 +213,7 @@ class PELEAnalyzer:
             forcefield = ['opls', 'openff']
             truncated = ['full', 'truncated']
             perturbation = ['minimization', 'if', 'refinement']
-            rescorings = ['xshort', 'short', 'long', 'xlong']
+            rescorings = ['xshort', 'short', 'long', 'xlong', 'xxlong']
 
             location = dataset_location.split('/')
 
