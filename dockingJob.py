@@ -350,73 +350,41 @@ class DockingJob:
             parameter_file = os.path.join(
                 '3_docking_job/job', 'parameter_file.prm')
 
-            if not os.path.isfile(parameter_file):
-                with open(parameter_file, 'w') as fileout:
-                    fileout.writelines(
-                        'RBT_PARAMETER_FILE_V1.00\n'
-                        'TITLE rdock\n'
-                        '\n'
-                        'RECEPTOR_FILE ' +
-                        receptor.split('.pdb')[0] + '.mol2' + '\n'
-                        'RECEPTOR_FLEX 3.0\n'
-                        '\n'
-                        '##################################################################\n'
-                        '### CAVITY DEFINITION: REFERENCE LIGAND METHOD\n'
-                        '##################################################################\n'
-                        'SECTION MAPPER\n'
-                        '    SITE_MAPPER RbtLigandSiteMapper\n'
-                        '    REF_MOL ' + reference_ligand + '\n'
-                        '    RADIUS 6.0\n'
-                        '    SMALL_SPHERE 1.0\n'
-                        '    MIN_VOLUME 100\n'
-                        '    MAX_CAVITIES 1\n'
-                        '    VOL_INCR 0.0\n'
-                        '   GRIDSTEP 0.5\n'
-                        'END_SECTION\n'
-                        '\n'
-                        '#################################\n'
-                        '#CAVITY RESTRAINT PENALTY\n'
-                        '#################################\n'
-                        'SECTION CAVITY\n'
-                        '    SCORING_FUNCTION RbtCavityGridSF\n'
-                        '    WEIGHT 1.0\n'
-                        'END_SECTION\n')
-
-        if protocol == 'score':
+        elif protocol == 'score':
             parameter_file = os.path.join(
                 '3_docking_job/rdock_score', 'parameter_file.prm')
 
-            if not os.path.isfile(parameter_file):
-                with open(parameter_file, 'w') as fileout:
-                    fileout.writelines(
-                        'RBT_PARAMETER_FILE_V1.00\n'
-                        'TITLE rdock\n'
-                        '\n'
-                        'RECEPTOR_FILE ' +
-                        receptor.split('.pdb')[0] + '.mol2' + '\n'
-                        'RECEPTOR_FLEX 3.0\n'
-                        '\n'
-                        '##################################################################\n'
-                        '### CAVITY DEFINITION: REFERENCE LIGAND METHOD\n'
-                        '##################################################################\n'
-                        'SECTION MAPPER\n'
-                        '    SITE_MAPPER RbtLigandSiteMapper\n'
-                        '    REF_MOL ' + reference_ligand + '\n'
-                        '    RADIUS 6.0\n'
-                        '    SMALL_SPHERE 1.0\n'
-                        '    MIN_VOLUME 100\n'
-                        '    MAX_CAVITIES 1\n'
-                        '    VOL_INCR 0.0\n'
-                        '   GRIDSTEP 0.5\n'
-                        'END_SECTION\n'
-                        '\n'
-                        '#################################\n'
-                        '#CAVITY RESTRAINT PENALTY\n'
-                        '#################################\n'
-                        'SECTION CAVITY\n'
-                        '    SCORING_FUNCTION RbtCavityGridSF\n'
-                        '    WEIGHT 1.0\n'
-                        'END_SECTION\n')
+        if not os.path.isfile(parameter_file):
+            with open(parameter_file, 'w') as fileout:
+                fileout.writelines(
+                    'RBT_PARAMETER_FILE_V1.00\n'
+                    'TITLE rdock\n'
+                    '\n'
+                    'RECEPTOR_FILE ' +
+                    receptor.split('.pdb')[0] + '.mol2' + '\n'
+                    'RECEPTOR_FLEX 3.0\n'
+                    '\n'
+                    '##################################################################\n'
+                    '### CAVITY DEFINITION: REFERENCE LIGAND METHOD\n'
+                    '##################################################################\n'
+                    'SECTION MAPPER\n'
+                    '    SITE_MAPPER RbtLigandSiteMapper\n'
+                    '    REF_MOL ' + reference_ligand + '\n'
+                    '    RADIUS 6.0\n'
+                    '    SMALL_SPHERE 1.0\n'
+                    '    MIN_VOLUME 100\n'
+                    '    MAX_CAVITIES 1\n'
+                    '    VOL_INCR 0.0\n'
+                    '   GRIDSTEP 0.5\n'
+                    'END_SECTION\n'
+                    '\n'
+                    '#################################\n'
+                    '#CAVITY RESTRAINT PENALTY\n'
+                    '#################################\n'
+                    'SECTION CAVITY\n'
+                    '    SCORING_FUNCTION RbtCavityGridSF\n'
+                    '    WEIGHT 1.0\n'
+                    'END_SECTION\n')
 
     def _rdockGridGenerator(self, protocol):
         """
@@ -899,7 +867,7 @@ class DockingJob:
 
         self._rdockParamFilesWriter(
             self.receptor, self.reference_ligand, protocol)
-        
+             
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
         self._rdockRunFilesGenerator(cpus_docking, protocol)
