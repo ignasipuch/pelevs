@@ -102,6 +102,7 @@ class DockingJob:
         self.docking_tool = None
         self.grid_file = None
         self.reference_ligand = None
+        self.ligand_score = None
 
         self._ligandsChecker(ligands)
         self._folderPreparation()
@@ -139,7 +140,7 @@ class DockingJob:
         if not os.path.isdir('3_docking_job/job'):
             os.mkdir('3_docking_job/job')
 
-    def _glidePrepareJob(self, grid_file, forcefield):
+    def _glidePrepareJob(self, grid_file, forcefield, protocol):
         """
         Copy files to job folder and generate necessary .in file 
         to perform Glide simulation.
@@ -151,24 +152,58 @@ class DockingJob:
         forcefield : str
             Name of the forcefield to be used in the Glide docking.
         """
+        if not os.path.isdir('3_docking_job/glide_score'):
+            os.mkdir('3_docking_job/glide_score')
+        
+        shutil.copy(grid_file, '3_docking_job/glide_score')
 
-        shutil.move(grid_file, '3_docking_job/job')
+        shutil.copy(grid_file, '3_docking_job/job')
         shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
 
-        with open('3_docking_job/job/glide_job.sh', 'w') as filein:
-            filein.writelines(
-                '"${SCHRODINGER}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
-            )
+        if protocol == 'dock':
+           grid_path = os.path.join(
+                '3_docking_job/job', 'glide_job.sh')
+           job_path = os.path.join(
+               '3_docking_job/job', 'glide_job.in')
+        
+        elif protocol == 'score':
+            grid_path = os.path.join(
+                '3_docking_job/glide_score', 'glide_score.sh')
+            job_path = os.path.join(
+               '3_docking_job/glide_score', 'glide_score.in')
 
-        with open('3_docking_job/job/glide_job.in', 'w') as filein:
+        with open(grid_path, 'w') as filein:
+            if protocol == 'dock':
+                filein.writelines(
+                    '"${SCHRODINGER}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
+                )
+            elif protocol == 'score':
+               filein.writelines(
+                    '"${SCHRODINGER}/glide" glide_score.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
+                ) 
+
+        with open(job_path, 'w') as filein:
             filein.writelines([
-                'FORCEFIELD   {}\n'.format(forcefield),
-                'GRIDFILE   {}\n'.format(grid_file),
-                'LIGANDFILE   {}\n'.format(self.ligands),
-                'POSES_PER_LIG   50\n',
-                'POSTDOCK_NPOSE   50\n',
-                'PRECISION   SP\n'
-            ])
+                    'GRIDFILE   {}\n'.format(grid_file),
+                    'PRECISION   SP\n'
+                ]) 
+            
+            if protocol == 'dock':
+                filein.writelines([
+                    'LIGANDFILE   {}\n'.format(self.ligands),
+                    'FORCEFIELD   {}\n'.format(forcefield),
+                    'POSES_PER_LIG   50\n',
+                    'POSTDOCK_NPOSE   50\n'
+                ])
+
+            if protocol == 'score':
+               filein.writelines([
+                    'LIGANDFILE   {}\n'.format(os.path.basename(self.ligand_score)),
+                    'DOCKING_METHOD   inplace\n',
+                    'POSTDOCK   False\n'
+                ]) 
+            
+        shutil.copy(self.ligand_score, '3_docking_job/glide_score')
 
         print(' - Glide job generated successfully with grid {grid} and forcefield {ff}.'.format(
             grid=grid_file, ff=forcefield))
@@ -871,3 +906,22 @@ class DockingJob:
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
         self._rdockRunFilesGenerator(cpus_docking, protocol)
+
+    def glideRescore(self, grid_file, ligand):
+        """
+        Prepare the job folder to send a Glide rescoring job
+
+        Parameters
+        ==========
+        grid_file : str
+            Name of the grid file (.zip) to dock ligands.
+        ligand : str
+            Ligand to rescore
+        """ 
+
+        protocol = 'score'
+        self.docking_tool = 'glide'
+        self.ligand_score = ligand
+        forcefield = 'OPLS2005'
+
+        self._glidePrepareJob(grid_file, forcefield, protocol)
