@@ -107,7 +107,6 @@ class DockingJob:
         self._ligandsChecker(ligands)
         self._folderPreparation()
 
-
     def _ligandsChecker(self, ligands):
         """
         Check validity of inputted ligands (sdf).
@@ -276,6 +275,11 @@ class DockingJob:
         os.remove(ligand_pdb_file)
         os.remove(reference_ligand_pdb_file)
 
+        # Assigning attributes
+        self.reference_ligand = 'reference_ligand.sdf'
+        self.receptor = 'receptor.mol2'
+        self.ligands = 'ligand.sdf'
+
     def _rdockReceptorFormatChecker(self, receptor):
         """
         Check receptor's format and transform it if necessary to mol2.
@@ -358,14 +362,16 @@ class DockingJob:
             parameter_file = os.path.join(
                 self._path_score, 'parameter_file.prm')
 
+        receptor = os.path.basename(receptor)
+        ligand = os.path.basename(reference_ligand)
+
         if not os.path.isfile(parameter_file):
             with open(parameter_file, 'w') as fileout:
                 fileout.writelines(
                     'RBT_PARAMETER_FILE_V1.00\n'
                     'TITLE rdock\n'
                     '\n'
-                    'RECEPTOR_FILE ' +
-                    receptor.split('.pdb')[0] + '.mol2' + '\n'
+                    'RECEPTOR_FILE ' + receptor + '\n'
                     'RECEPTOR_FLEX 3.0\n'
                     '\n'
                     '##################################################################\n'
@@ -373,7 +379,7 @@ class DockingJob:
                     '##################################################################\n'
                     'SECTION MAPPER\n'
                     '    SITE_MAPPER RbtLigandSiteMapper\n'
-                    '    REF_MOL ' + reference_ligand + '\n'
+                    '    REF_MOL ' + ligand + '\n'
                     '    RADIUS 6.0\n'
                     '    SMALL_SPHERE 1.0\n'
                     '    MIN_VOLUME 100\n'
@@ -566,8 +572,7 @@ class DockingJob:
                         'module load boost/1.64.0\n'
                         '\n'
                         '\n'
-                        'rbdock -i {path}/ligand.sdf -o results/ligand_out -r parameter_file.prm -p score.prm -allH\n'.format(
-                            path=self._path_score)
+                        'rbdock -i ligand.sdf -o ligand_out -r parameter_file.prm -p score.prm -allH\n'
                     )
 
             with open(os.path.join(self._path_score,'prepare_rDock_run.sh'), 'w') as fileout:
