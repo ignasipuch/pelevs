@@ -240,7 +240,7 @@ class DockingAnalyzer:
         plt.savefig(
             '3_docking_job/images/{}_mw_zscore_correlation.png'.format(docking_method), format='png')
 
-    def _glideDockingResultsChecker(self):
+    def _glideDockingResultsChecker(self):  
         """
         Checks if the results obtained with glide have been downloaded 
         in the correct path.
