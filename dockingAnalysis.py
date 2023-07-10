@@ -77,6 +77,7 @@ class DockingAnalyzer:
         self.experimental_data = None
         self.calculated_data = None
         self.molecular_weight = None
+        self.protocol = None
 
     def _correlationPlotter(self, x, y, docking_method):
         """
@@ -152,6 +153,10 @@ class DockingAnalyzer:
             return ExactMolWt(mol)
 
         path = '1_input_files/molecular_weight'
+        path_images = '3_docking_job/images'
+
+        if not os.path.isdir(path_images):
+            os.mkdir(path_images)        
 
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -336,21 +341,48 @@ class DockingAnalyzer:
 
         print(' - Time distribution figure plotted correctly.')
 
-    def _rdockDockingResultsChecker(self):
+    def _rdockDockingResultsChecker(self, protocol):
         """
         Checks if the results obtained with rdock have been downloaded 
         in the correct path.
         """
 
-        path_docking = '3_docking_job/job/results'
-        path_results = [x for x in os.listdir(
-            path_docking) if x.endswith('.sd')][0]
+        if protocol == 'dock':
 
-        if len(path_results) == 0 and path_results[0].endswith('sd'):
-            raise Exception(
-                'ResultsMissingError: Before initializing the object the results must be downloaded and located at {}'.format(path_docking))
+            self.protocol = 'dock'
+            
 
-        self.docking_tool = 'rdock'
+            path_docking = '3_docking_job/job/results'
+            path_results = [x for x in os.listdir(
+                path_docking) if x.endswith('.sd')][0]
+            
+            if len(path_results) == 0 and path_results[0].endswith('sd'):
+                raise Exception(
+                    'ResultsMissingError: Before initializing the object the results must be downloaded and located at {}'.format(path_docking))
+        
+        elif protocol == 'score':
+
+            self.protocol = 'score'
+            self.docking_tool = 'rdock'
+
+            path_score = '3_docking_job/rdock_score'
+            output_files = 0
+            input_folders = 0
+            
+            for folder in [x for x in os.listdir(path_score) if os.path.isdir(os.path.join(path_score,x))]:
+                input_folders += 1
+                path_folder_score = os.path.join(path_score,folder)
+                for file in os.listdir(path_folder_score):
+                    if file == 'ligand_out.sd':
+                        output_files += 1
+
+            outputs_per_inputs = output_files/input_folders
+
+            if outputs_per_inputs != 1:
+                raise Exception('OutputError: No tall the simulations have generated an output.')
+
+        else: 
+            raise Exception('ProtocolError: Only \'dock\' or \'score\' are accepted as protocols.')
 
     def _rdockDataFrameGenerator(self):
         """
@@ -359,46 +391,89 @@ class DockingAnalyzer:
         ligand name, conformer, and rdock score.
         """
 
-        # Folder path containing the files
-        folder_path = '3_docking_job/job/results'
-        storage_path = '3_docking_job/'
+        if self.protocol == 'dock':
 
-        data = []
+            # Folder path containing the files
+            folder_path = '3_docking_job/job/results'
+            storage_path = '3_docking_job/'
 
-        for filename in [x for x in os.listdir(folder_path) if x.startswith('split')]:
-            file_path = os.path.join(folder_path, filename)
+            data = []
 
-            counter = 1
-            score_bool = False
-            conformer_bool = False
+            for filename in [x for x in os.listdir(folder_path) if x.startswith('split')]:
+                file_path = os.path.join(folder_path, filename)
 
-            # Open the file
-            with open(file_path, 'r') as file:
-                for line in file:
-                    if score_bool:
-                        score = line.split()[0]
-                    if conformer_bool:
-                        ligand, conformer = line.split('-')
-                        data.append(
-                            [filename, counter, ligand, conformer, score])
-                    if '$$$$' in line:
-                        counter += 1
-                    if '>  <SCORE>' in line:
-                        score_bool = True
-                    else:
-                        score_bool = False
-                    if '>  <s_lp_Variant>' in line:
-                        conformer_bool = True
-                    else:
-                        conformer_bool = False
+                counter = 1
+                score_bool = False
+                conformer_bool = False
 
-        # Write the extracted data to a CSV file
-        output_file = 'rDock_data.csv'
-        with open(os.path.join(storage_path, output_file), 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['file_name', 'file_entry', 'ligand',
-                             'conformer', 'rdock_score'])
-            writer.writerows(data)
+                # Open the file
+                with open(file_path, 'r') as file:
+                    for line in file:
+                        if score_bool:
+                            score = line.split()[0]
+                        if conformer_bool:
+                            ligand, conformer = line.split('-')
+                            data.append(
+                                [filename, counter, ligand, conformer, score])
+                        if '$$$$' in line:
+                            counter += 1
+                        if '>  <SCORE>' in line:
+                            score_bool = True
+                        else:
+                            score_bool = False
+                        if '>  <s_lp_Variant>' in line:
+                            conformer_bool = True
+                        else:
+                            conformer_bool = False
+
+            # Write the extracted data to a CSV file
+            output_file = 'rDock_data.csv'
+            with open(os.path.join(storage_path, output_file), 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['file_name', 'file_entry', 'ligand',
+                                'conformer', 'rdock_score'])
+                writer.writerows(data)
+
+            print(' - rDock data extraction completed.')
+            print(' - Data saved in {}'.format(os.path.join(storage_path, output_file)))
+
+        elif self.protocol == 'score':
+
+            # Folder path containing the files
+            folder_path = '3_docking_job/rdock_score'
+            storage_path = '3_docking_job/'
+
+            data = []
+
+            for filename in [x for x in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path,x))]:
+                file_path = os.path.join(folder_path, filename, 'ligand_out.sd')
+
+                ligand = filename
+
+                counter = 1
+                score_bool = False
+                conformer_bool = False
+
+                # Open the file
+                with open(file_path, 'r') as file:
+                    for line in file:
+                        if score_bool:
+                            score = line.split()[0]
+                            data.append(
+                                [filename, counter, ligand, score])
+                        if '$$$$' in line:
+                            counter += 1
+                        if '>  <SCORE>' in line:
+                            score_bool = True
+                        else:
+                            score_bool = False
+
+            # Write the extracted data to a CSV file
+            output_file = 'rDock_rescore_data.csv'
+            with open(os.path.join(storage_path, output_file), 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['file_name', 'file_entry', 'ligand', 'rdock_score'])
+                writer.writerows(data)
 
         print(' - rDock data extraction completed.')
         print(' - Data saved in {}'.format(os.path.join(storage_path, output_file)))
@@ -411,25 +486,32 @@ class DockingAnalyzer:
         original dataset (since ligprep generates multiple conformers).
         """
 
-        # Sorting data
-        df = pd.read_csv('3_docking_job/rDock_data.csv')
-        sorted_df = df.sort_values('rdock_score')
-        unique_df = sorted_df.drop_duplicates('ligand')
-        final_df = unique_df.sort_values('ligand')
+        if self.protocol == 'dock':
+            
+            # Sorting data
+            df = pd.read_csv('3_docking_job/rDock_data.csv')
+            sorted_df = df.sort_values('rdock_score')
+            unique_df = sorted_df.drop_duplicates('ligand')
+            final_df = unique_df.sort_values('ligand')
 
-        # Adding new column with conformer generated.
-        final_df['docking_conformation'] = final_df['file_entry'] - \
-            ((final_df['file_entry'] - 1) // 50) * 50
+            # Adding new column with conformer generated.
+            final_df['docking_conformation'] = final_df['file_entry'] - \
+                ((final_df['file_entry'] - 1) // 50) * 50
 
-        # Reorder the columns
-        desired_order = ['ligand', 'conformer', 'docking_conformation',
-                         'file_name', 'file_entry', 'rdock_score']
-        save_df = final_df.reindex(columns=desired_order)
-        save_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
+            # Reorder the columns
+            desired_order = ['ligand', 'conformer', 'docking_conformation',
+                            'file_name', 'file_entry', 'rdock_score']
+            save_df = final_df.reindex(columns=desired_order)
+            save_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
 
-        print(' - Csv generated at 3_docking_job/rDock_best_poses.csv with best poses.')
+            self.calculated_data = final_df
 
-        self.calculated_data = final_df
+            print(' - Csv generated at 3_docking_job/rDock_best_poses.csv with best poses.')
+
+        elif self.protocol == 'score':
+
+            df = pd.read_csv('3_docking_job/rDock_rescore_data.csv')
+            self.calculated_data = df
 
     def _correlation(self, experimental_data, column_name):
         """
@@ -473,7 +555,7 @@ class DockingAnalyzer:
         print(' - Molecular weight plots generated succesfully.')
         print(' - Images stored at 3_docking_job/images\n')
 
-    def glideAnalysis(self, experimental_data, column_name):
+    def glideAnalysis(self, experimental_data, column_name, protocol='dock'):
         """
         Uses different hidden methods to retrieve all the data 
         from the glide docking simulation and generate an 
@@ -488,13 +570,13 @@ class DockingAnalyzer:
             Name of the column where the data in the csv is stored.
         """
 
-        self._glideDockingResultsChecker()
+        self._glideDockingResultsChecker(protocol)
         self._glideDataFrameRetriever()
         self._molecularWeightCalculator()
         self._correlation(experimental_data, column_name)
         self._glideTimePlotter()
 
-    def rdockAnalysis(self, experimental_data, column_name):
+    def rdockAnalysis(self, experimental_data, column_name, protocol='dock'):
         """
         Uses different hidden methods to retrieve all the data 
         from the rdock docking simulation and generate an 
@@ -508,7 +590,7 @@ class DockingAnalyzer:
             Name of the column where the data in the csv is stored.
         """
 
-        self._rdockDockingResultsChecker()
+        self._rdockDockingResultsChecker(protocol)
         self._rdockDataFrameGenerator()
         self._rdockDataFrameTrimmer()
         self._molecularWeightCalculator()
