@@ -1026,10 +1026,10 @@ class PELE:
                 ' - Generating yaml and run files.')
 
             # Generating yamls and runs
-            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
+            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
-                input_simulation_file = os.listdir(working_path)[0]
+                input_simulation_file = [x for x in os.listdir(working_path) if x.endswith('.pdb')][0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
 
