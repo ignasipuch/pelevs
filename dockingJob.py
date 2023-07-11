@@ -152,26 +152,37 @@ class DockingJob:
         forcefield : str
             Name of the forcefield to be used in the Glide docking.
         """
-        
-        if not os.path.isdir('3_docking_job/glide_score'):
-            os.mkdir('3_docking_job/glide_score')
-        
-        shutil.copy(grid_file, '3_docking_job/glide_score')
 
-        shutil.copy(grid_file, '3_docking_job/job')
-        shutil.copy('2_ligprep_job/job/' + self.ligands, '3_docking_job/job')
-
+        docking_job_path = '3_docking_job/job'
+        ligprep_path = '2_ligprep_job/job/'
+        glide_score_path = '3_docking_job/glide_score'
+       
         if protocol == 'dock':
-           grid_path = os.path.join(
-                '3_docking_job/job', 'glide_job.sh')
-           job_path = os.path.join(
-               '3_docking_job/job', 'glide_job.in')
-        
-        elif protocol == 'score':
+            shutil.copy(grid_file, docking_job_path)
+            shutil.copy(ligprep_path + self.ligands, docking_job_path)
+
             grid_path = os.path.join(
-                '3_docking_job/glide_score', 'glide_score.sh')
+                    docking_job_path, 'glide_job.sh')
             job_path = os.path.join(
-               '3_docking_job/glide_score', 'glide_score.in')
+                docking_job_path, 'glide_job.in')
+            
+        elif protocol == 'score':
+            
+            ligand_name = os.path.basename(self.ligand_score).split('.')[0]
+            ligand_score_path = os.path.join(glide_score_path,ligand_name)
+
+            if not os.path.isdir(glide_score_path):
+                os.mkdir(glide_score_path) 
+
+            if not os.path.isdir(ligand_score_path):
+                os.mkdir(ligand_score_path)   
+
+            shutil.copy(grid_file, ligand_score_path)
+                
+            grid_path = os.path.join(
+                ligand_score_path, 'glide_score.sh')
+            job_path = os.path.join(
+               ligand_score_path, 'glide_score.in')
 
         with open(grid_path, 'w') as filein:
             if protocol == 'dock':
@@ -204,7 +215,7 @@ class DockingJob:
                     'POSTDOCK   False\n'
                 ]) 
             
-        shutil.copy(self.ligand_score, '3_docking_job/glide_score')
+        shutil.copy(self.ligand_score, ligand_score_path)
 
         print(' - Glide job generated successfully with grid {grid} and forcefield {ff}.'.format(
             grid=grid_file, ff=forcefield))
