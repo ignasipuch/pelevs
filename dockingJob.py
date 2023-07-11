@@ -140,7 +140,7 @@ class DockingJob:
         if not os.path.isdir('3_docking_job/job'):
             os.mkdir('3_docking_job/job')
 
-    def _glidePrepareJob(self, grid_file, forcefield):
+    def _glidePrepareJob(self, grid_file, forcefield, protocol):
         """
         Copy files to job folder and generate necessary .in file 
         to perform Glide simulation.
