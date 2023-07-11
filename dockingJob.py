@@ -152,6 +152,7 @@ class DockingJob:
         forcefield : str
             Name of the forcefield to be used in the Glide docking.
         """
+        
         if not os.path.isdir('3_docking_job/glide_score'):
             os.mkdir('3_docking_job/glide_score')
         
