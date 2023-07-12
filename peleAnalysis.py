@@ -550,6 +550,7 @@ class PELEAnalyzer:
             print(' - {} simulations have failed.'.format(nan_lost))
 
             combined_df = pd.concat(dfs, ignore_index=True)
+            self.all_data = combined_df.copy()
 
             equibindBestPoses(combined_df)
 
@@ -605,7 +606,7 @@ class PELEAnalyzer:
 
             # Trimming equibind data
             self.equibindDataTrimming(df_all_data)
-            df = self.equibind_data
+            df = self.all_data
 
             for index, row in df.iterrows():
                 system_value = row['ligand']
@@ -614,7 +615,7 @@ class PELEAnalyzer:
                     dg_value = df_experimental.loc[system_value, 'dG']
                     df.loc[index, 'dG'] = dg_value
 
-            self.all_data = df
+            self.all_data = df.copy()
 
         else:
             for index, row in df_all_data.iterrows():
