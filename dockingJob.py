@@ -213,9 +213,10 @@ class DockingJob:
                     'LIGANDFILE   {}\n'.format(os.path.basename(self.ligand_score)),
                     'DOCKING_METHOD   inplace\n',
                     'POSTDOCK   False\n'
-                ]) 
-            
-        shutil.copy(self.ligand_score, ligand_score_path)
+                ])   
+        
+        if protocol == 'score':   
+            shutil.copy(self.ligand_score, ligand_score_path)
 
         print(' - Glide job generated successfully with grid {grid} and forcefield {ff}.'.format(
             grid=grid_file, ff=forcefield))
@@ -846,8 +847,11 @@ class DockingJob:
 
         self.grid_file = grid_file
         self.docking_tool = 'glide'
+        self.protocol = 'dock'
 
-        self._glidePrepareJob(grid_file, forcefield)
+        protocol = self.protocol
+
+        self._glidePrepareJob(grid_file, forcefield, protocol)
 
     def setRdockDocking(self, reference_ligand, ligands, cpus_docking):
         """
