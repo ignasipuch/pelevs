@@ -281,7 +281,7 @@ class DockingAnalyzer:
         # Keeping important columns
         df_og = pd.read_csv(path_results)
         columns_to_keep = ['SMILES', 'title', 'i_i_glide_lignum',
-                           'r_glide_cpu_time', 'r_i_glide_gscore']
+                           'r_glide_cpu_time', 'r_i_docking_score']
         df = df_og[columns_to_keep].copy()
 
         # Adding molecule number to the dataframe
@@ -300,12 +300,12 @@ class DockingAnalyzer:
         df.to_csv('3_docking_job/Glide_whole_dataset.csv')
 
         # Sorting by energies and keeping only one per molecule
-        df_csv_sort = df.sort_values('r_i_glide_gscore').reset_index(drop=True)
+        df_csv_sort = df.sort_values('r_i_docking_score').reset_index(drop=True)
 
         df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
         sorted_df = df_result.sort_values(['title','i_i_glide_lignum'])
 
-        sorted_df = sorted_df.sort_values('r_i_glide_gscore')
+        sorted_df = sorted_df.sort_values('r_i_docking_score')
         sorted_df = sorted_df.drop_duplicates('title')
         sorted_df = sorted_df.sort_values('title')
 
@@ -550,7 +550,7 @@ class DockingAnalyzer:
         if self.docking_tool == 'rdock':
             y = df_calculated.rdock_score.to_numpy()
         elif self.docking_tool == 'glide':
-            y = df_calculated.r_i_glide_gscore.to_numpy()
+            y = df_calculated.r_i_docking_score.to_numpy()
 
         self._correlationPlotter(x, y, self.docking_tool)
         self._doubleCorrelationPlotter(x, y, mw, self.docking_tool)
