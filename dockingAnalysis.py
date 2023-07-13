@@ -300,16 +300,20 @@ class DockingAnalyzer:
         df.to_csv('3_docking_job/Glide_whole_dataset.csv')
 
         # Sorting by energies and keeping only one per molecule
-        df.sort_values(by="r_i_glide_gscore", inplace=True)
-        df.drop_duplicates(subset="title", keep="first", inplace=True)
-        df.sort_values(by="title", inplace=True)
-        df.reset_index(drop=True, inplace=True)
+        df_csv_sort = df.sort_values('r_i_glide_gscore').reset_index(drop=True)
 
-        df.to_csv('3_docking_job/Glide_dataset.csv')
+        df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
+        sorted_df = df_result.sort_values(['title','i_i_glide_lignum'])
+
+        sorted_df = sorted_df.sort_values('r_i_glide_gscore')
+        sorted_df = sorted_df.drop_duplicates('title')
+        sorted_df = sorted_df.sort_values('title')
+
+        sorted_df.to_csv('3_docking_job/Glide_dataset.csv')
 
         print(' - Csv information imported and sorted (self.calculated_data)')
 
-        self.calculated_data = df
+        self.calculated_data = sorted_df
 
     def _glideTimePlotter(self):
         """
@@ -350,7 +354,7 @@ class DockingAnalyzer:
         if protocol == 'dock':
 
             self.protocol = 'dock'
-            
+            self.docking_tool = 'rdock'
 
             path_docking = '3_docking_job/job/results'
             path_results = [x for x in os.listdir(
