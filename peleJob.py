@@ -345,7 +345,7 @@ class PELE:
 
             # Changeing residue number
             for line in lines:
-                
+
                 # Change lines of the receptor
                 if line.startswith('ATOM'):
                     residue_letters = line[17:20].strip()
@@ -525,7 +525,6 @@ class PELE:
         output_file = os.path.join(working_directory, ligand_name)
 
         file_mod_prot, ligand_cont_num = _receptorModifier(receptor)
-        raise Exception('stop')
         file_mod_lig = _ligandAtomChainNumberModifier(ligand)
         intermediate = _receptorLigandMerger(file_mod_prot, file_mod_lig)
         _inputAdapter(intermediate, output_file, ligand_cont_num)
