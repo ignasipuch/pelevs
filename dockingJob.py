@@ -103,6 +103,7 @@ class DockingJob:
         self.grid_file = None
         self.reference_ligand = None
         self.ligand_score = None
+        self.output_models = None
 
         self._ligandsChecker(ligands)
         self._folderPreparation()
@@ -140,7 +141,7 @@ class DockingJob:
         if not os.path.isdir('3_docking_job/job'):
             os.mkdir('3_docking_job/job')
 
-    def _glidePrepareJob(self, grid_file, forcefield, protocol):
+    def _glidePrepareJob(self, grid_file, forcefield, protocol, output_model):
         """
         Copy files to job folder and generate necessary .in file 
         to perform Glide simulation.
@@ -204,8 +205,8 @@ class DockingJob:
                 filein.writelines([
                     'LIGANDFILE   {}\n'.format(self.ligands),
                     'FORCEFIELD   {}\n'.format(forcefield),
-                    'POSES_PER_LIG   50\n',
-                    'POSTDOCK_NPOSE   50\n'
+                    'POSES_PER_LIG   {}\n'.format(output_model),
+                    'POSTDOCK_NPOSE   {}\n'.format(output_model)
                 ])
 
             if protocol == 'score':
@@ -527,7 +528,7 @@ class DockingJob:
                             ligands_file=ligands, cpus=cpus_docking)
                     )
 
-    def _rdockRunFilesGenerator(self, cpus_docking, protocol):
+    def _rdockRunFilesGenerator(self, cpus_docking, protocol, output_models):
         """
         Generate all the necessary runs to run an individual
         rDock simulation, to prepare the rDock simulation, and 
@@ -555,45 +556,6 @@ class DockingJob:
             for i in range(1, cpus_docking+1):
                 with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
                     fileout.writelines(
-                        '#!/bin/sh\n',
-                        '#SBATCH --job-name=rdock' + str(i) + ' \n',
-                        '#SBATCH --time=01:00:00\n',
-                        '#SBATCH --ntasks=1\n',
-                        '#SBATCH --output=rdock.out\n',
-                        '#SBATCH --error=rdock.err\n',
-                        '\n',
-                        'module load rdock\n',
-                        'module load ANACONDA/2019.10\n',
-                        'module load intel\n',
-                        'module load mkl\n',
-                        'module load impi\n',
-                        'module load gcc\n',
-                        'module load boost/1.64.0\n',
-                        '\n',
-                        '\n',
-                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
-                            val=i))
-            
-            with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
-                fileout.writelines(
-                    '#!/bin/bash\n'
-                    '# Run grid.sh\n\n'
-                    'echo \' \'\n'
-                    'echo \' - Generating grid and cavity\'\n'
-                    'echo \' - Loading rDock module:\'\n'
-                    'echo \' \'\n'
-                    'source grid.sh\n'
-                    'echo \' \'\n\n'
-                    '# Run split.sh\n'
-                    'echo \' - Splitting ligands\'\n'
-                    'source split.sh\n'
-                )
-
-        if protocol == 'dock':
-            # Generating run files
-            for i in range(1, cpus_docking+1):
-                with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
-                    fileout.writelines(
                         '#!/bin/sh\n'
                         '#SBATCH --job-name=rdock' + str(i) + ' \n'
                         '#SBATCH --time=01:00:00\n'
@@ -610,8 +572,8 @@ class DockingJob:
                         'module load boost/1.64.0\n'
                         '\n'
                         '\n'
-                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
-                            val=i))
+                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n {out} -allH\n'.format(
+                            val=i, out=output_models))
 
             with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
                 fileout.writelines(
@@ -831,7 +793,7 @@ class DockingJob:
         print(' - Job created to be sent to CTE-POWER')
         print(' - Equibind docking job created successfully.')
 
-    def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
+    def setGlideDocking(self, grid_file, forcefield='OPLS_2005', output_models=50):
         """
         Prepare the job folder to send a Glide docking job.
 
@@ -848,12 +810,13 @@ class DockingJob:
         self.grid_file = grid_file
         self.docking_tool = 'glide'
         self.protocol = 'dock'
+        self.output_models = output_models
 
         protocol = self.protocol
 
-        self._glidePrepareJob(grid_file, forcefield, protocol)
+        self._glidePrepareJob(grid_file, forcefield, protocol, output_models)
 
-    def setRdockDocking(self, reference_ligand, ligands, cpus_docking):
+    def setRdockDocking(self, reference_ligand, ligands, cpus_docking, output_models=50):
         """
         Prepare the job folder to send an rDock docking job.
 
@@ -871,6 +834,7 @@ class DockingJob:
         self.reference_ligand = reference_ligand
         self.docking_tool = 'rdock'
         protocol = 'dock'
+        self.output_models = output_models
 
         self._rdockReceptorFormatChecker(self.receptor)
         self._rdockFileCopier(reference_ligand)
