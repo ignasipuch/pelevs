@@ -57,7 +57,7 @@ class PELEAnalyzer:
         Calculate all the scores of all the metric of all the simulations performed for
         each rescoring method.
     """
-    
+
     def __init__(self):
         """
         Initialize object and assign atributes.
@@ -560,7 +560,8 @@ class PELEAnalyzer:
 
         print(' - Information of all the simulation stored in 5_pele_analysis/Equibind_all_dataset.csv')
 
-        combined_df.to_csv('5_pele_analysis/Equibind_all_dataset.csv', index=False)
+        combined_df.to_csv(
+            '5_pele_analysis/Equibind_all_dataset.csv', index=False)
         self.equibind_data = combined_df
 
     def PELEDataCollector(self):
@@ -720,17 +721,21 @@ class PELEAnalyzer:
             if x_range is not None:
 
                 length_before_x = len(df)
-                df = df[(df[x_label] >= x_range[0]) & (df[x_label] < x_range[1])]
+                df = df[(df[x_label] >= x_range[0]) &
+                        (df[x_label] < x_range[1])]
                 length_after_x = len(df)
 
-                print(' - {} data points deleted after x-axis trimming.'.format(length_before_x-length_after_x))
+                print(
+                    ' - {} data points deleted after x-axis trimming.'.format(length_before_x-length_after_x))
 
             if y_range is not None:
 
                 length_before_y = len(df)
-                df = df[(df[y_label] >= y_range[0]) & (df[y_label] < y_range[1])]
+                df = df[(df[y_label] >= y_range[0]) &
+                        (df[y_label] < y_range[1])]
                 length_after_y = len(df)
-                print(' - {} data points deleted after y-axis trimming.'.format(length_before_y-length_after_y))
+                print(
+                    ' - {} data points deleted after y-axis trimming.'.format(length_before_y-length_after_y))
 
             return df
 
@@ -744,7 +749,7 @@ class PELEAnalyzer:
 
             print(
                 ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
-            
+
             if (x_range is not None) or (y_range is not None):
                 df = data_selection(df, x_label, y_label, x_range, y_range)
 
@@ -764,7 +769,7 @@ class PELEAnalyzer:
 
             print(
                 ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
-            
+
             if (x_range is not None) or (y_range is not None):
                 df = data_selection(df, x_label, y_label, x_range, y_range)
 

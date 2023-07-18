@@ -156,7 +156,7 @@ class DockingAnalyzer:
         path_images = '3_docking_job/images'
 
         if not os.path.isdir(path_images):
-            os.mkdir(path_images)        
+            os.mkdir(path_images)
 
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -245,7 +245,7 @@ class DockingAnalyzer:
         plt.savefig(
             '3_docking_job/images/{}_mw_zscore_correlation.png'.format(docking_method), format='png')
 
-    def _glideDockingResultsChecker(self, protocol):  
+    def _glideDockingResultsChecker(self, protocol):
         """
         Checks if the results obtained with glide have been downloaded 
         in the correct path.
@@ -300,10 +300,11 @@ class DockingAnalyzer:
         df.to_csv('3_docking_job/Glide_whole_dataset.csv')
 
         # Sorting by energies and keeping only one per molecule
-        df_csv_sort = df.sort_values('r_i_docking_score').reset_index(drop=True)
+        df_csv_sort = df.sort_values(
+            'r_i_docking_score').reset_index(drop=True)
 
         df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
-        sorted_df = df_result.sort_values(['title','i_i_glide_lignum'])
+        sorted_df = df_result.sort_values(['title', 'i_i_glide_lignum'])
 
         sorted_df = sorted_df.sort_values('r_i_docking_score')
         sorted_df = sorted_df.drop_duplicates('title')
@@ -359,11 +360,11 @@ class DockingAnalyzer:
             path_docking = '3_docking_job/job/results'
             path_results = [x for x in os.listdir(
                 path_docking) if x.endswith('.sd')][0]
-            
+
             if len(path_results) == 0 and path_results[0].endswith('sd'):
                 raise Exception(
                     'ResultsMissingError: Before initializing the object the results must be downloaded and located at {}'.format(path_docking))
-        
+
         elif protocol == 'score':
 
             self.protocol = 'score'
@@ -372,10 +373,10 @@ class DockingAnalyzer:
             path_score = '3_docking_job/rdock_score'
             output_files = 0
             input_folders = 0
-            
-            for folder in [x for x in os.listdir(path_score) if os.path.isdir(os.path.join(path_score,x))]:
+
+            for folder in [x for x in os.listdir(path_score) if os.path.isdir(os.path.join(path_score, x))]:
                 input_folders += 1
-                path_folder_score = os.path.join(path_score,folder)
+                path_folder_score = os.path.join(path_score, folder)
                 for file in os.listdir(path_folder_score):
                     if file == 'ligand_out.sd':
                         output_files += 1
@@ -383,10 +384,12 @@ class DockingAnalyzer:
             outputs_per_inputs = output_files/input_folders
 
             if outputs_per_inputs != 1:
-                raise Exception('OutputError: No tall the simulations have generated an output.')
+                raise Exception(
+                    'OutputError: No tall the simulations have generated an output.')
 
-        else: 
-            raise Exception('ProtocolError: Only \'dock\' or \'score\' are accepted as protocols.')
+        else:
+            raise Exception(
+                'ProtocolError: Only \'dock\' or \'score\' are accepted as protocols.')
 
     def _rdockDataFrameGenerator(self):
         """
@@ -435,7 +438,7 @@ class DockingAnalyzer:
             with open(os.path.join(storage_path, output_file), 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(['file_name', 'file_entry', 'ligand',
-                                'conformer', 'rdock_score'])
+                                 'conformer', 'rdock_score'])
                 writer.writerows(data)
 
             print(' - rDock data extraction completed.')
@@ -449,8 +452,9 @@ class DockingAnalyzer:
 
             data = []
 
-            for filename in [x for x in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path,x))]:
-                file_path = os.path.join(folder_path, filename, 'ligand_out.sd')
+            for filename in [x for x in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, x))]:
+                file_path = os.path.join(
+                    folder_path, filename, 'ligand_out.sd')
 
                 ligand = filename
 
@@ -476,7 +480,8 @@ class DockingAnalyzer:
             output_file = 'rDock_rescore_data.csv'
             with open(os.path.join(storage_path, output_file), 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(['file_name', 'file_entry', 'ligand', 'rdock_score'])
+                writer.writerow(
+                    ['file_name', 'file_entry', 'ligand', 'rdock_score'])
                 writer.writerows(data)
 
         print(' - rDock data extraction completed.')
@@ -491,7 +496,7 @@ class DockingAnalyzer:
         """
 
         if self.protocol == 'dock':
-            
+
             # Sorting data
             df = pd.read_csv('3_docking_job/rDock_data.csv')
             sorted_df = df.sort_values('rdock_score')
@@ -504,13 +509,14 @@ class DockingAnalyzer:
 
             # Reorder the columns
             desired_order = ['ligand', 'conformer', 'docking_conformation',
-                            'file_name', 'file_entry', 'rdock_score']
+                             'file_name', 'file_entry', 'rdock_score']
             save_df = final_df.reindex(columns=desired_order)
             save_df.to_csv('3_docking_job/rDock_best_poses.csv', index=False)
 
             self.calculated_data = final_df
 
-            print(' - Csv generated at 3_docking_job/rDock_best_poses.csv with best poses.')
+            print(
+                ' - Csv generated at 3_docking_job/rDock_best_poses.csv with best poses.')
 
         elif self.protocol == 'score':
 

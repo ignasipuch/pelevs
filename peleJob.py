@@ -375,7 +375,8 @@ class PELE:
                     previous_residue = residue_letters
                     previous_chain_residue = chain_residue
 
-                else: pass
+                else:
+                    pass
 
             # Write the modified lines back to the PDB file
             with open(file_mod_prot, 'w') as pdb_file:
@@ -383,7 +384,6 @@ class PELE:
 
             # Counting number of atoms of the protein
             ligand_cont_num = 0
-
 
             with open(file_mod_prot) as filein:
                 for line in filein:
@@ -805,7 +805,6 @@ class PELE:
 
                 print(
                     ' - Merging the {} ligands to the receptor...'.format(len(os.listdir(docked_ligands_path))))
-                
 
                 # Merging all the inputs
                 for ligand_folder in [x for x in os.listdir(pele_simulation_path) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
@@ -818,7 +817,7 @@ class PELE:
                     self._PDBMerger(os.path.join(ligand_folder_path, receptor), os.path.join(
                         ligand_folder_path, ligand))
 
-            # Deleting openbabel merging information.  
+            # Deleting openbabel merging information.
             if os.path.isfile('out.txt'):
                 os.remove('out.txt')
 
@@ -1055,7 +1054,8 @@ class PELE:
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
-                input_simulation_file = [x for x in os.listdir(working_path) if x.endswith('.pdb')][0]
+                input_simulation_file = [x for x in os.listdir(
+                    working_path) if x.endswith('.pdb')][0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
 
@@ -1139,8 +1139,10 @@ class PELE:
                     os.mkdir(os.path.join(pele_simulation_path, conformer))
 
             # Copying receptor
-            receptor = [x for x in os.listdir(receptor_origin) if x.endswith('.pdb')][0]
-            print(' - Reference receptor: {}'.format(os.path.join(receptor_origin,receptor)))
+            receptor = [x for x in os.listdir(
+                receptor_origin) if x.endswith('.pdb')][0]
+            print(
+                ' - Reference receptor: {}'.format(os.path.join(receptor_origin, receptor)))
 
             if not os.path.isdir(receptor_destination):
                 os.mkdir(receptor_destination)
@@ -1208,7 +1210,8 @@ class PELE:
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
-                input_simulation_file = [x for x in os.listdir(working_path) if x.endswith('.pdb')][0]
+                input_simulation_file = [x for x in os.listdir(
+                    working_path) if x.endswith('.pdb')][0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
 
@@ -1236,21 +1239,21 @@ class PELE:
         as small as possible. This method is thought to be used after all the jobs wanted 
         have been generated.
         """
-        
+
         # Generating paths
         path_destination = self.docking_tool
         path_script = 'dockprotocol/scripts/pele_downloader.py'
         path_simulation = '4_pele_simulation'
         file_name = 'download_files.sh'
-        download_file_path = os.path.join(path_simulation,file_name)
+        download_file_path = os.path.join(path_simulation, file_name)
 
         # Copying script
-        shutil.copy(path_script,path_simulation)
+        shutil.copy(path_script, path_simulation)
 
         # Generating runner
         with open(download_file_path, 'w') as filein:
             filein.writelines(
                 'python pele_downloader.py -o {}'.format(path_destination)
             )
-        
+
         print(' - Run:\n   bash {}\n   After PELE simulations have been performed.'.format(file_name))
