@@ -103,6 +103,7 @@ class DockingJob:
         self.grid_file = None
         self.reference_ligand = None
         self.ligand_score = None
+        self.output_models = None
 
         self._ligandsChecker(ligands)
         self._folderPreparation()
@@ -140,7 +141,7 @@ class DockingJob:
         if not os.path.isdir('3_docking_job/job'):
             os.mkdir('3_docking_job/job')
 
-    def _glidePrepareJob(self, grid_file, forcefield, protocol):
+    def _glidePrepareJob(self, grid_file, forcefield, protocol, output_model):
         """
         Copy files to job folder and generate necessary .in file 
         to perform Glide simulation.
@@ -156,33 +157,33 @@ class DockingJob:
         docking_job_path = '3_docking_job/job'
         ligprep_path = '2_ligprep_job/job/'
         glide_score_path = '3_docking_job/glide_score'
-       
+
         if protocol == 'dock':
             shutil.copy(grid_file, docking_job_path)
             shutil.copy(ligprep_path + self.ligands, docking_job_path)
 
             grid_path = os.path.join(
-                    docking_job_path, 'glide_job.sh')
+                docking_job_path, 'glide_job.sh')
             job_path = os.path.join(
                 docking_job_path, 'glide_job.in')
-            
+
         elif protocol == 'score':
-            
+
             ligand_name = os.path.basename(self.ligand_score).split('.')[0]
-            ligand_score_path = os.path.join(glide_score_path,ligand_name)
+            ligand_score_path = os.path.join(glide_score_path, ligand_name)
 
             if not os.path.isdir(glide_score_path):
-                os.mkdir(glide_score_path) 
+                os.mkdir(glide_score_path)
 
             if not os.path.isdir(ligand_score_path):
-                os.mkdir(ligand_score_path)   
+                os.mkdir(ligand_score_path)
 
             shutil.copy(grid_file, ligand_score_path)
-                
+
             grid_path = os.path.join(
                 ligand_score_path, 'glide_score.sh')
             job_path = os.path.join(
-               ligand_score_path, 'glide_score.in')
+                ligand_score_path, 'glide_score.in')
 
         with open(grid_path, 'w') as filein:
             if protocol == 'dock':
@@ -190,32 +191,34 @@ class DockingJob:
                     '"${SCHRODINGER}/glide" glide_job.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
                 )
             elif protocol == 'score':
-               filein.writelines(
+                filein.writelines(
                     '"${SCHRODINGER}/glide" glide_score.in -OVERWRITE -adjust -HOST localhost:1 -TMPLAUNCHDIR'
-                ) 
+                )
 
         with open(job_path, 'w') as filein:
             filein.writelines([
-                    'GRIDFILE   {}\n'.format(grid_file),
-                    'PRECISION   SP\n'
-                ]) 
-            
+                'GRIDFILE   {}\n'.format(grid_file),
+                'PRECISION   SP\n'
+            ])
+
             if protocol == 'dock':
                 filein.writelines([
                     'LIGANDFILE   {}\n'.format(self.ligands),
                     'FORCEFIELD   {}\n'.format(forcefield),
-                    'POSES_PER_LIG   50\n',
-                    'POSTDOCK_NPOSE   50\n'
+                    'POSES_PER_LIG   {}\n'.format(output_model),
+                    'POSTDOCK_NPOSE   {}\n'.format(output_model)
                 ])
 
             if protocol == 'score':
-               filein.writelines([
-                    'LIGANDFILE   {}\n'.format(os.path.basename(self.ligand_score)),
+                filein.writelines([
+                    'LIGANDFILE   {}\n'.format(
+                        os.path.basename(self.ligand_score)),
                     'DOCKING_METHOD   inplace\n',
                     'POSTDOCK   False\n'
-                ]) 
-            
-        shutil.copy(self.ligand_score, ligand_score_path)
+                ])
+
+        if protocol == 'score':
+            shutil.copy(self.ligand_score, ligand_score_path)
 
         print(' - Glide job generated successfully with grid {grid} and forcefield {ff}.'.format(
             grid=grid_file, ff=forcefield))
@@ -317,7 +320,7 @@ class DockingJob:
         if not os.path.isdir('3_docking_job/rdockScore'):
             os.mkdir('3_docking_job/rdockScore')
 
-        shutil.copy(complete_structure, '3_docking_job/rdockScore') 
+        shutil.copy(complete_structure, '3_docking_job/rdockScore')
 
     def _rdockReceptorFormatChecker(self, receptor):
         """
@@ -526,7 +529,7 @@ class DockingJob:
                             ligands_file=ligands, cpus=cpus_docking)
                     )
 
-    def _rdockRunFilesGenerator(self, cpus_docking, protocol):
+    def _rdockRunFilesGenerator(self, cpus_docking, protocol, output_models):
         """
         Generate all the necessary runs to run an individual
         rDock simulation, to prepare the rDock simulation, and 
@@ -548,45 +551,6 @@ class DockingJob:
 
         if not os.path.isdir('3_docking_job/job/results'):
             os.mkdir('3_docking_job/job/results')
-        
-        if protocol == 'dock':
-            # Generating run files
-            for i in range(1, cpus_docking+1):
-                with open('3_docking_job/job/run{}'.format(i), 'w') as fileout:
-                    fileout.writelines(
-                        '#!/bin/sh\n',
-                        '#SBATCH --job-name=rdock' + str(i) + ' \n',
-                        '#SBATCH --time=01:00:00\n',
-                        '#SBATCH --ntasks=1\n',
-                        '#SBATCH --output=rdock.out\n',
-                        '#SBATCH --error=rdock.err\n',
-                        '\n',
-                        'module load rdock\n',
-                        'module load ANACONDA/2019.10\n',
-                        'module load intel\n',
-                        'module load mkl\n',
-                        'module load impi\n',
-                        'module load gcc\n',
-                        'module load boost/1.64.0\n',
-                        '\n',
-                        '\n',
-                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
-                            val=i))
-            
-            with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
-                fileout.writelines(
-                    '#!/bin/bash\n'
-                    '# Run grid.sh\n\n'
-                    'echo \' \'\n'
-                    'echo \' - Generating grid and cavity\'\n'
-                    'echo \' - Loading rDock module:\'\n'
-                    'echo \' \'\n'
-                    'source grid.sh\n'
-                    'echo \' \'\n\n'
-                    '# Run split.sh\n'
-                    'echo \' - Splitting ligands\'\n'
-                    'source split.sh\n'
-                )
 
         if protocol == 'dock':
             # Generating run files
@@ -609,8 +573,8 @@ class DockingJob:
                         'module load boost/1.64.0\n'
                         '\n'
                         '\n'
-                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n 50 -allH\n'.format(
-                            val=i))
+                        'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n {out} -allH\n'.format(
+                            val=i, out=output_models))
 
             with open('3_docking_job/job/prepare_rDock_run.sh', 'w') as fileout:
                 fileout.writelines(
@@ -830,7 +794,7 @@ class DockingJob:
         print(' - Job created to be sent to CTE-POWER')
         print(' - Equibind docking job created successfully.')
 
-    def setGlideDocking(self, grid_file, forcefield='OPLS_2005'):
+    def setGlideDocking(self, grid_file, forcefield='OPLS_2005', output_models=50):
         """
         Prepare the job folder to send a Glide docking job.
 
@@ -846,10 +810,14 @@ class DockingJob:
 
         self.grid_file = grid_file
         self.docking_tool = 'glide'
+        self.protocol = 'dock'
+        self.output_models = output_models
 
-        self._glidePrepareJob(grid_file, forcefield)
+        protocol = self.protocol
 
-    def setRdockDocking(self, reference_ligand, ligands, cpus_docking):
+        self._glidePrepareJob(grid_file, forcefield, protocol, output_models)
+
+    def setRdockDocking(self, reference_ligand, ligands, cpus_docking, output_models=50):
         """
         Prepare the job folder to send an rDock docking job.
 
@@ -867,6 +835,7 @@ class DockingJob:
         self.reference_ligand = reference_ligand
         self.docking_tool = 'rdock'
         protocol = 'dock'
+        self.output_models = output_models
 
         self._rdockReceptorFormatChecker(self.receptor)
         self._rdockFileCopier(reference_ligand)
@@ -914,7 +883,7 @@ class DockingJob:
 
         self._rdockParamFilesWriter(
             self.receptor, self.reference_ligand, protocol)
-             
+
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(self.ligands, cpus_docking, protocol)
         self._rdockRunFilesGenerator(cpus_docking, protocol)
@@ -929,7 +898,7 @@ class DockingJob:
             Name of the grid file (.zip) to dock ligands.
         ligand : str
             Ligand to rescore
-        """ 
+        """
 
         protocol = 'score'
         self.docking_tool = 'glide'
