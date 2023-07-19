@@ -251,9 +251,21 @@ class DockingAnalyzer:
         in the correct path.
         """
 
-        path_docking = '3_docking_job/job'
-        path_results = os.path.join(
-            path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
+        if protocol == 'dock':
+            path_docking = '3_docking_job/job'
+            path_results = os.path.join(
+                path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
+        elif protocol == 'score':
+            path_docking = '3_docking_job/glide_score'
+            
+            paths_to_check = []
+            for ligand in [x for x in os.listdir(path_docking) if x != '.ipynb_checkpoints']:
+                path_ligand = os.path.join(path_docking,ligand)
+                path_csv = os.path.join(path_ligand,[x for x in os.listdir(path_ligand) if x.endswith('.csv')][0])
+                paths_to_check.append(path_csv)
+
+            print(paths_to_check)
+
 
         if not os.path.isfile(path_results):
             raise Exception(
@@ -263,7 +275,7 @@ class DockingAnalyzer:
 
         self.docking_tool = 'glide'
 
-    def _glideDataFrameRetriever(self):
+    def _glideDataFrameRetriever(self, protocol):
         """
         Retrieves the data frame generated with the Glide docking.
         It also modifies certain columns and values to end up
@@ -274,47 +286,56 @@ class DockingAnalyzer:
         the dataset (since ligprep generates conformers).
         """
 
-        path_docking = '3_docking_job/job'
+        if protocol == 'dock':
+            path_docking = '3_docking_job/job'
+        elif protocol == 'score':
+            path_docking = '3_docking_job/glide_score'
+
         path_results = os.path.join(
             path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
 
-        # Keeping important columns
-        df_og = pd.read_csv(path_results)
-        columns_to_keep = ['SMILES', 'title', 'i_i_glide_lignum',
-                           'r_glide_cpu_time', 'r_i_docking_score']
-        df = df_og[columns_to_keep].copy()
+        if protocol == 'dock':
+            # Keeping important columns
+            df_og = pd.read_csv(path_results)
+            columns_to_keep = ['SMILES', 'title', 'i_i_glide_lignum',
+                            'r_glide_cpu_time', 'r_i_docking_score']
+            df = df_og[columns_to_keep].copy()
 
-        # Adding molecule number to the dataframe
-        prev_title = None
-        prev_value = None
-        modified_i_i_glide_lignum = np.zeros(df.shape[0], dtype=int)
+            # Adding molecule number to the dataframe
+            prev_title = None
+            prev_value = None
+            modified_i_i_glide_lignum = np.zeros(df.shape[0], dtype=int)
 
-        for i, row in df.iterrows():
-            if row['title'] != prev_title:
-                prev_title = row['title']
-                prev_value = row['i_i_glide_lignum']
-            modified_i_i_glide_lignum[i] = row['i_i_glide_lignum'] - prev_value
+            for i, row in df.iterrows():
+                if row['title'] != prev_title:
+                    prev_title = row['title']
+                    prev_value = row['i_i_glide_lignum']
+                modified_i_i_glide_lignum[i] = row['i_i_glide_lignum'] - prev_value
 
-        df.insert(2, 'conformer', modified_i_i_glide_lignum + 1)
+            df.insert(2, 'conformer', modified_i_i_glide_lignum + 1)
 
-        df.to_csv('3_docking_job/Glide_whole_dataset.csv')
+            df.to_csv('3_docking_job/Glide_whole_dataset.csv')
 
-        # Sorting by energies and keeping only one per molecule
-        df_csv_sort = df.sort_values(
-            'r_i_docking_score').reset_index(drop=True)
+            # Sorting by energies and keeping only one per molecule
+            df_csv_sort = df.sort_values(
+                'r_i_docking_score').reset_index(drop=True)
 
-        df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
-        sorted_df = df_result.sort_values(['title', 'i_i_glide_lignum'])
+            df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
+            sorted_df = df_result.sort_values(['title', 'i_i_glide_lignum'])
 
-        sorted_df = sorted_df.sort_values('r_i_docking_score')
-        sorted_df = sorted_df.drop_duplicates('title')
-        sorted_df = sorted_df.sort_values('title')
+            sorted_df = sorted_df.sort_values('r_i_docking_score')
+            sorted_df = sorted_df.drop_duplicates('title')
+            sorted_df = sorted_df.sort_values('title')
 
-        sorted_df.to_csv('3_docking_job/Glide_dataset.csv')
+            sorted_df.to_csv('3_docking_job/Glide_dataset.csv')
 
-        print(' - Csv information imported and sorted (self.calculated_data)')
+            print(' - Csv information imported and sorted (self.calculated_data)')
 
-        self.calculated_data = sorted_df
+            self.calculated_data = sorted_df
+        
+        elif protocol == 'score':
+
+            print(path_results)
 
     def _glideTimePlotter(self):
         """
@@ -580,8 +601,10 @@ class DockingAnalyzer:
             Name of the column where the data in the csv is stored.
         """
 
+        self.protocol = protocol
+
         self._glideDockingResultsChecker(protocol)
-        self._glideDataFrameRetriever()
+        self._glideDataFrameRetriever(protocol)
         self._molecularWeightCalculator()
         self._correlation(experimental_data, column_name)
         self._glideTimePlotter()
