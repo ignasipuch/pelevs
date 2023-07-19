@@ -624,7 +624,7 @@ class DockingJob:
                         'module load boost/1.64.0\n'
                         '\n'
                         '\n'
-                        'rbdock -i 3_docking_job/rdock_score/ligand.sdf -o results/ligand_out -r parameter_file.prm -p score.prm -allH\n'.format(
+                        'rbdock -i ligand.sdf -o ligand_out -r parameter_file.prm -p score.prm -allH\n'.format(
                             val=i)
                     )
 
