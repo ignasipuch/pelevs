@@ -252,24 +252,27 @@ class DockingAnalyzer:
         """
 
         if protocol == 'dock':
+            
             path_docking = '3_docking_job/job'
             path_results = os.path.join(
                 path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
+            
+            if not os.path.isfile(path_results):
+                raise Exception(
+                    'ResultsMissingError: Before initializing the object the results must be downloaded at {}'.format(path_docking))
+            
         elif protocol == 'score':
             path_docking = '3_docking_job/glide_score'
             
             paths_to_check = []
-            for ligand in [x for x in os.listdir(path_docking) if x != '.ipynb_checkpoints']:
+            for ligand in [x for x in os.listdir(path_docking) if (x != '.ipynb_checkpoints') and (x != 'glide_score.csv')]:
                 path_ligand = os.path.join(path_docking,ligand)
-                path_csv = os.path.join(path_ligand,[x for x in os.listdir(path_ligand) if x.endswith('.csv')][0])
+                path_csv = os.path.join(path_ligand,[x for x in os.listdir(path_ligand) if x.endswith('_score.csv')][0])
                 paths_to_check.append(path_csv)
-
-            print(paths_to_check)
-
-
-        if not os.path.isfile(path_results):
-            raise Exception(
-                'ResultsMissingError: Before initializing the object the results must be downloaded and at {}'.format(path_docking))
+        
+            if len(paths_to_check) == 0:
+                raise Exception(
+                    'ResultsMissingError: Before initializing the object the results must be downloaded at {}'.format(path_docking))
 
         print(' - Glide docking results found')
 
@@ -287,14 +290,11 @@ class DockingAnalyzer:
         """
 
         if protocol == 'dock':
+
             path_docking = '3_docking_job/job'
-        elif protocol == 'score':
-            path_docking = '3_docking_job/glide_score'
-
-        path_results = os.path.join(
-            path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
-
-        if protocol == 'dock':
+            path_results = os.path.join(
+                path_docking, [x for x in os.listdir(path_docking) if x.endswith('.csv')][0])
+            
             # Keeping important columns
             df_og = pd.read_csv(path_results)
             columns_to_keep = ['SMILES', 'title', 'i_i_glide_lignum',
@@ -332,10 +332,23 @@ class DockingAnalyzer:
             print(' - Csv information imported and sorted (self.calculated_data)')
 
             self.calculated_data = sorted_df
-        
-        elif protocol == 'score':
 
-            print(path_results)
+        elif protocol == 'score':
+            path_docking = '3_docking_job/glide_score'
+    
+            paths_to_check = []
+            for ligand in [x for x in os.listdir(path_docking) if (x != '.ipynb_checkpoints') and (x != 'glide_score.csv')]:
+                path_ligand = os.path.join(path_docking,ligand)
+                path_csv = os.path.join(path_ligand,[x for x in os.listdir(path_ligand) if x.endswith('_score.csv')][0])
+                paths_to_check.append(path_csv)
+
+            dfs = []
+            for file in paths_to_check:
+                df = pd.read_csv(file)
+                dfs.append(df)
+
+            merged_df = pd.concat(dfs, ignore_index=True)
+            merged_df.to_csv('3_docking_job/glide_score/glide_score.csv')
 
     def _glideTimePlotter(self):
         """
