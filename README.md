@@ -35,14 +35,14 @@ Generation of tautomers and isomers as well as protonation of the inhibitor liga
 
 ### 2. Docking
 
-Docking of the inhibitors to the target.
+Docking of the inhibitors to the target or rescoring docked poses.
 
 **Modules:** 
 1. dockingJob.py 
 
 	**- Class:** DockingJob
 	
-	**- Methods:** setGlideDocking, setRdockDockingset, and EquibindDocking
+	**- Methods:** setGlideDocking, setRdockDockingset, setEquibindDocking, rDockRescore, and GlideRescore
 	
 2. dockingAnalysis.py
 
@@ -60,7 +60,7 @@ Refinement of the docking pose obtained in the previous step in the pipeline.
 
 **- Class:** PELE
 
-**- Methods:** setGlideToPELESimulation, setRdockToPELESimulation, and setEquibindToPELESimulation
+**- Methods:** setGlideToPELESimulation, setRdockToPELESimulation, setEquibindToPELESimulation, and PELEDownloader.
 
 ---
 
