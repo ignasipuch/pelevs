@@ -29,6 +29,8 @@ class PELE:
         With the results of the Equibind docking, prepares a PELE simulation to be run at MN4.
     setEquibindToPELESimulation(self, rescoring_method, force_field, truncated, perturbation_protocol)
         With the results of the rDock docking, prepares a PELE simulation to be run at MN4.
+    PELEDownloader(self)
+        With all the simulations generated, creates a bash file to run all of them together.
 
     Hidden Methods
     ==============
@@ -289,6 +291,13 @@ class PELE:
     def _PDBConversor(self, file_in, path_out):
         """
         Converts the input file to PDB format using Open Babel.
+
+        Parameters
+        ==========
+        file_in : str
+            Name of the file to be converted.
+        path_out : str
+            Path to store the output file.
         """
 
         file_name, file_format = file_in.split('.')
@@ -541,18 +550,14 @@ class PELE:
             Path where the simulation is stored.
         pdb_file : str
             Name of the pdb file for which the yaml and run are needed.
-        forcefield_list : list
-            List with [bool, str] where the string is the forcefield chosen (or default)
-            and the bool indicates whether the forcefield option was chosen or default.
-        truncated_list : list
-            List with [bool, str] where the string is the protein portion chosen (or default)
-            and the bool indicates whether the protein portion option was chosen or default.
-        perturbation_list : list
-            List with [bool, str] where the string is the perturbation chosen (or default)
-            and the bool indicates whether the perturbation option was chosen or default.
-        rescoring_method_list : list
-            List with [bool, str] where the string is the rescoring method chosen (or default)
-            and the bool indicates whether the rescoring method  option was chosen or default.
+        force_field : str
+            Name of the forcefield chosen (or default)
+        truncated : str
+            Name of the protein portion chosen (or default)
+        perturbation_protocol : str
+            Name of the perturbation chosen (or default)
+        rescoring_method : str
+            Name of the rescoring method chosen (or default)
         """
 
         # YAML file generation
