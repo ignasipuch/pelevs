@@ -23,6 +23,10 @@ class DockingJob:
     reference_ligand : str
         Name of the bound ligand that is going to be used to generate the cavity
         and the grid with rDock.
+    ligand_score : str
+        Ligand we want to obtain a rescore with.
+    output_models : int
+        Number of conformations generated per docking.
 
     Methods
     =======
@@ -35,7 +39,10 @@ class DockingJob:
     setEquibindDocking(self, ligands, receptor)
         Prepare an Equibind docking folder with necessary files to send to 
         CTE-POWER and launch the job.
-
+    rDockRescore(self, complete_structure)
+        Prepare a rescoring job with rDock.
+    GlideRescore(self, grid_file, ligand)
+        Prepare a rescoring job with Glide.
 
     Hidden Methods
     ==============
@@ -46,6 +53,9 @@ class DockingJob:
         Prepares folder paths for the new docking job.
     _glidePrepareJob(self, grid_file, forcefield)
         Prepare files for a docking with Glide
+    _rdockRescorePreparation(self, complete_structure)
+        Prepare the files to launch an rdock rescore 
+        simulation.
     _rdockReceptorFormatChecker(self, receptor)
         Check receptor's file format and change it to mol2.
     _rdockFileCopier(self, reference_ligand)
@@ -73,13 +83,6 @@ class DockingJob:
         """
         Prepare files and folders coming from the liprep job in a 
         directory to perform  acertain kind of docking.
-
-        Parameters
-        ==========
-        receptor : str
-            Name of the file with the receptor
-        ligands : str
-            Name of the csv file with SMILES and id.
         """
 
         if os.path.isdir('1_input_files/receptor/'):
@@ -152,6 +155,10 @@ class DockingJob:
             Name of the grid file (.zip) to dock ligands.
         forcefield : str
             Name of the forcefield to be used in the Glide docking.
+        protocol : str
+            Name of the protocol used to score the docking.
+        output_model : int
+            Number of output conformations in the docking.
         """
 
         docking_job_path = '3_docking_job/job'
@@ -394,6 +401,8 @@ class DockingJob:
         reference_ligand : str
             File name of the ligand used to generate cavity 
             and grid for rDock.
+        protocol : str
+            Name of the protocol used to score the ligand(s).
         """
 
         print(' - Using {} as reference ligand to generated cavity and grid.'.format(reference_ligand))
@@ -441,6 +450,11 @@ class DockingJob:
     def _rdockGridGenerator(self, protocol):
         """
         Generate run file to generate cavity and grid for rDock.
+
+        Parameters
+        ==========
+        protocol : str
+            Name of the protocol used to score the ligand(s).
         """
         if protocol == 'dock':
             with open('3_docking_job/job/grid.sh', 'w') as fileout:
@@ -467,6 +481,7 @@ class DockingJob:
             Name of the outputted ligands by ligprep.
         cpus_docking : int
             Number of cpus to use for the rDock docking.
+
         """
 
         print(' - Splitting {ligands_file}\'s molecules into {cpus} (different) file(s).'.format(
@@ -543,12 +558,15 @@ class DockingJob:
 
         Parameters
         ==========
+        cpus_docking : str
+            Number of cpus to be used in the docking.
         reference_ligand : str
             File name of the ligand used to generate cavity 
             and grid for rDock.
-
         protocol : str
             Name of the protocol to be used, it can be either dock or score
+        output_models : int
+            Number of output conformations in the docking.
         """
 
         # Generating folders
@@ -806,12 +824,12 @@ class DockingJob:
 
         Parameters
         ==========
-        Parameters
-        ==========
         grid_file : str
             Name of the grid file (.zip) to dock ligands.
         forcefield : str
             Name of the forcefield to be used in the Glide docking.
+        output_models : int
+            Number of output conformations.
         """
 
         self.grid_file = grid_file
@@ -836,6 +854,8 @@ class DockingJob:
             Name of the outputted ligands by ligprep.
         cpus_docking : int
             Number of cpus to use for the rDock docking.
+        output_models : int
+            Number of output conformations.
         """
 
         self.reference_ligand = reference_ligand
