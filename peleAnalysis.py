@@ -511,6 +511,15 @@ class PELEAnalyzer:
         """
 
         def equibindBestPoses(df):
+            """
+            Selects the best scores for all the simulations performed with all the 
+            tautomers/stereoisomers from ligPrep.
+
+            Parameters
+            ==========
+            df : pandas.DataFrame
+                Dataframe with the information of all the simulations. 
+            """
 
             df.sort_values(by="be_min", inplace=True)
             df.drop_duplicates(subset="ligand", keep="first", inplace=True)
@@ -643,6 +652,10 @@ class PELEAnalyzer:
             Label of the dataframe's column you want to take as the x axis.
         sampling : str
             Sampling used for these results.
+        x_range : list
+            List with the range of the x axis of the plot
+        y_range : list
+            List with the range of the y axis of the plot
         df : pandas.DataFrame
             Dataframe with the information the user wants to analyze. 
         """
