@@ -791,3 +791,34 @@ class PELEAnalyzer:
                 os.mkdir('5_pele_analysis/images')
 
             plotter(df, x_label, y_label, sampling)
+
+    def simulationAnalyzer(self, protocol, system):
+        """
+        Makes plots with of the specific simulation we are interested in.
+
+        Parameters
+        ==========
+        protocol : list
+            List with all the protocol from which we want to analyze the 
+            PELE simulation (i.e. [truncated, xshort]). The order of the 
+            options should be: [forcefield, truncated, rescoring, xshort]
+        system : str
+            Name of the system protein ligand we want to analyze.
+        """
+
+        def simulationChecker(protocol,system):
+            docking_tools = ['glide','rdock','equibind']
+            path = '5_pele_analysis/simulations'
+            docking_method = [x for x in os.listdir(path) if x in docking_tools][0]
+
+            path_simulation = os.path.join(path,docking_method,'/'.join(protocol),system)
+
+            if os.path.isdir(path_simulation):
+                print(' - Analyzing the simulation in \n\t{}'.format(path_simulation))
+            else:
+                raise Exception('WrongPathError: The path {} does not exist. Please check how\
+                                the variable protocol has to be inputed.'.format(path_simulation))
+            
+            return path_simulation
+
+        simulation_path = simulationChecker(protocol, system)
