@@ -46,6 +46,9 @@ class PELEAnalyzer:
         metrics.
     correlationPlotter(self, x_label, y_label, sampling, df=None)
         Plot correlations between the y_label and x_label according to the data in df.
+    simulationAnalyzer(self, protocol, system)
+        Generates plots of all the interesting combinations of metrics in the reports of
+        concrete simulations.
 
     Hidden Methods
     ==============
