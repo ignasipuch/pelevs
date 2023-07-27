@@ -259,7 +259,7 @@ class PELEAnalyzer:
                 List with the different scores calculated for the SASA.
             rmsd_list : list
                 List with the different scores calculated for the RMSD.
-            """
+            """            
 
             def minimum(vector):
                 return min(vector)
@@ -806,7 +806,60 @@ class PELEAnalyzer:
             Name of the system protein ligand we want to analyze.
         """
 
+        def directoryManager(protocol,system):
+            '''
+            Creates necessary directories for storing the analysis results.
+
+            Parameters
+            ==========
+            protocol : list
+                List with all the protocol from which we want to analyze the 
+                PELE simulation (i.e. [truncated, xshort]). The order of the 
+                options should be: [forcefield, truncated, rescoring, xshort]
+            system : str
+                Name of the system protein ligand we want to analyze.
+
+            Returns
+            =======
+            path_system : str
+                The path to the directory where the analysis results will be stored.
+            '''
+
+            path_pele_analysis = '5_pele_analysis'
+            path_analysis = os.path.join(path_pele_analysis, 'analysis')
+            path_system = os.path.join(path_analysis,'/'.join(protocol),system)
+
+            # Generating folders
+            if not os.path.isdir(path_pele_analysis):
+                os.mkdir(path_pele_analysis)
+
+            if not os.path.isdir(path_analysis):
+                os.mkdir(path_analysis)
+
+            if not os.path.isdir(path_system):
+                os.makedirs(path_system)
+
+            return path_system
+
         def simulationChecker(protocol,system):
+            '''
+            Checks the existence of the simulation results directory.
+
+            Parameters
+            ==========
+            protocol : list
+                List with all the protocol from which we want to analyze the 
+                PELE simulation (i.e. [truncated, xshort]). The order of the 
+                options should be: [forcefield, truncated, rescoring, xshort]
+            system : str
+                Name of the system protein ligand we want to analyze.
+
+            Returns
+            =======
+            path_simulation : str
+                The path to the directory containing the simulation results for the specified system and protocol.
+            '''
+
             docking_tools = ['glide','rdock','equibind']
             path = '5_pele_analysis/simulations'
             docking_method = [x for x in os.listdir(path) if x in docking_tools][0]
@@ -821,4 +874,133 @@ class PELEAnalyzer:
             
             return path_simulation
 
+        def datasetRetriever(path_system):
+            '''
+            Retrieves data from PELE simulation reports.
+
+            Parameters
+            ==========
+            path_system : str
+                The path to the directory containing the PELE simulation reports.
+
+            Returns
+            =======
+            te : list
+                List of Total Energy values extracted from the simulation reports.
+            be : list
+                List of Binding Energy values extracted from the simulation reports.
+            sasa : list
+                List of SASA (Solvent Accessible Surface Area) values extracted from the simulation reports.
+            rmsd : list
+                List of RMSD (Root Mean Square Deviation) values extracted from the simulation reports.
+            '''
+
+            te = []
+            be = []
+            sasa = []
+            rmsd = []
+
+            list_epochs = [x for x in os.listdir(
+                path_system) if os.path.isdir(os.path.join(path_system, x))]
+
+            if len(list_epochs) != 0:
+                for epoch in list_epochs:
+                    path_epoch = os.path.join(path_system, epoch)
+
+                    for report in [x for x in os.listdir(path_epoch) if x.startswith('report')]:
+                        path_report = os.path.join(path_epoch, report)
+
+                        with open(path_report, 'r') as filein:
+                            cont = 0
+                            for line in filein:
+
+                                cont += 1
+
+                                if cont != 1:
+                                    sline = line.split()
+
+                                    te.append(float(sline[3]))
+                                    be.append(float(sline[4]))
+                                    sasa.append(float(sline[5]))
+                                    rmsd.append(float(sline[6]))
+
+            return te, be, sasa, rmsd
+        
+        def plotter(path_store, protocol, system, te, be, sasa, rmsd):
+            '''
+            Generates and stores scatter plots for the specific simulation data.
+
+            Parameters
+            ==========
+            path_store : str
+                The path to the directory where the generated plots will be stored.
+            protocol : list
+                List with all the protocol from which we want to analyze the 
+                PELE simulation (i.e. [truncated, xshort]). The order of the 
+                options should be: [forcefield, truncated, rescoring, xshort]
+            system : str
+                Name of the system protein ligand we want to analyze.
+            te : list
+                List of Total Energy values.
+            be : list
+                List of Binding Energy values.
+            sasa : list
+                List of SASA (Solvent Accessible Surface Area) values.
+            rmsd : list
+                List of RMSD (Root Mean Square Deviation) values.
+            '''
+            def create_scatter_plot(x, y, c=None, x_var_name='', y_var_name='', color_var_name=''):
+                '''
+                Creates and stores a scatter plot with optional colorbar.
+
+                Parameters
+                ==========
+                x : list
+                    List of x-axis data values.
+                y : list
+                    List of y-axis data values.
+                c : list or None, optional
+                    List of color data values. If provided, a colorbar will be added to the plot. Default is None.
+                x_var_name : str, optional
+                    Name of the x-axis variable used for constructing the filename. Default is an empty string.
+                y_var_name : str, optional
+                    Name of the y-axis variable used for constructing the filename. Default is an empty string.
+                color_var_name : str, optional
+                    Name of the color variable used for constructing the filename when a colorbar is present. Default is an empty string.
+                '''
+                
+                plt.figure()
+                if c is None:
+                    plt.scatter(x, y)
+                    filename = f'{x_var_name}_{y_var_name}.png'
+                else:
+                    plt.scatter(x, y, c=c)
+                    colorbar = plt.colorbar()
+                    colorbar.set_label('RMSD', fontsize=12)
+                    filename = f'{x_var_name}_{y_var_name}_{color_var_name}.png'
+
+                plt.ylabel('Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy')
+                plt.xlabel('Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD')
+                plt.title('System {prot} from {ligand}: {y_var} vs {x_var}'.format(prot=protocol[-1], ligand=system,
+                                                                                    y_var='Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy',
+                                                                                    x_var='Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD'))
+                plt.tight_layout()
+                plt.savefig(f'{path_store}/{filename}')
+                plt.close()
+
+            # Individual scatter plots
+            create_scatter_plot(te, be, x_var_name='te', y_var_name='be')
+            create_scatter_plot(te, sasa, x_var_name='te', y_var_name='sasa')
+            create_scatter_plot(be, sasa, x_var_name='be', y_var_name='sasa')
+            create_scatter_plot(rmsd, te, x_var_name='rmsd', y_var_name='te')
+            create_scatter_plot(rmsd, be, x_var_name='rmsd', y_var_name='be')
+            create_scatter_plot(rmsd, sasa, x_var_name='rmsd', y_var_name='sasa')
+            create_scatter_plot(te, be, rmsd, x_var_name='te', y_var_name='be', color_var_name='rmsd')
+
+            print(' - Storing images at {}'.format(path_store))
+
+        path_store_system = directoryManager(protocol,system)
         simulation_path = simulationChecker(protocol, system)
+        te, be, sasa, rmsd = datasetRetriever(simulation_path)
+        plotter(path_store_system,protocol,system,te,be,sasa,rmsd)
+    
