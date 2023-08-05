@@ -318,13 +318,19 @@ class PELEAnalyzer:
             sasa = []
             rmsd = []
 
-            list_epochs = [x for x in os.listdir(
+            list_epochs_og = [x for x in os.listdir(
                 path_system) if os.path.isdir(os.path.join(path_system, x))]
+
+            list_epochs = [str(x) for x in sorted([int(x) for x in list_epochs_og])]
 
             if len(list_epochs) != 0:
                 for epoch in list_epochs:
                     path_epoch = os.path.join(path_system, epoch)
-                    for report in [x for x in os.listdir(path_epoch) if x.startswith('report')]:
+                    list_reports_og = [x for x in os.listdir(path_epoch) if x.startswith('report_')]
+                    list_report = sorted(list_reports_og, key=lambda x: int(x.split('_')[1]))
+
+                    for report in list_report:
+
                         path_report = os.path.join(path_epoch, report)
                         with open(path_report, 'r') as filein:
                             cont = 0
@@ -896,23 +902,35 @@ class PELEAnalyzer:
                 List of SASA (Solvent Accessible Surface Area) values extracted from the simulation reports.
             rmsd : list
                 List of RMSD (Root Mean Square Deviation) values extracted from the simulation reports.
+            step : list
+                List of integers with the step value of each MC step.
             '''
 
             te = []
             be = []
             sasa = []
             rmsd = []
+            step = []
 
-            list_epochs = [x for x in os.listdir(
+            step_collector = {}
+
+            list_epochs_og = [x for x in os.listdir(
                 path_system) if os.path.isdir(os.path.join(path_system, x))]
+
+            list_epochs = [str(x) for x in sorted([int(x) for x in list_epochs_og])]
 
             if len(list_epochs) != 0:
                 for epoch in list_epochs:
                     path_epoch = os.path.join(path_system, epoch)
+                    list_reports_og = [x for x in os.listdir(path_epoch) if x.startswith('report_')]
+                    list_report = sorted(list_reports_og, key=lambda x: int(x.split('_')[1]))
 
-                    for report in [x for x in os.listdir(path_epoch) if x.startswith('report')]:
+                    for report in list_report:
+                        if epoch == '0':
+                            cont_steps = 1
+                        else: cont_steps = step_collector[os.path.join(str(int(epoch)-1),report)] + 1
+
                         path_report = os.path.join(path_epoch, report)
-
                         with open(path_report, 'r') as filein:
                             cont = 0
                             for line in filein:
@@ -926,10 +944,14 @@ class PELEAnalyzer:
                                     be.append(float(sline[4]))
                                     sasa.append(float(sline[5]))
                                     rmsd.append(float(sline[6]))
+                                    step.append(cont_steps)
 
-            return te, be, sasa, rmsd
+                                    step_collector[os.path.join(str(int(epoch)),report)] = cont_steps
+                                    cont_steps += 1
+
+            return te, be, sasa, rmsd, step
         
-        def plotter(path_store, protocol, system, te, be, sasa, rmsd):
+        def plotter(path_store, protocol, system, te, be, sasa, rmsd, step):
             '''
             Generates and stores scatter plots for the specific simulation data.
 
@@ -951,7 +973,10 @@ class PELEAnalyzer:
                 List of SASA (Solvent Accessible Surface Area) values.
             rmsd : list
                 List of RMSD (Root Mean Square Deviation) values.
+            step : list
+                List of step values for continuity between files.
             '''
+
             def create_scatter_plot(x, y, c=None, x_var_name='', y_var_name='', color_var_name=''):
                 '''
                 Creates and stores a scatter plot with optional colorbar.
@@ -971,24 +996,24 @@ class PELEAnalyzer:
                 color_var_name : str, optional
                     Name of the color variable used for constructing the filename when a colorbar is present. Default is an empty string.
                 '''
-                
                 plt.figure()
                 if c is None:
                     plt.scatter(x, y)
                     filename = f'{x_var_name}_{y_var_name}.png'
                 else:
-                    plt.scatter(x, y, c=c)
+                    plt.scatter(x, y, c=c, cmap='viridis', marker='o')
                     colorbar = plt.colorbar()
-                    colorbar.set_label('RMSD', fontsize=12)
+                    colorbar.set_label('Step', fontsize=12)
                     filename = f'{x_var_name}_{y_var_name}_{color_var_name}.png'
 
                 plt.ylabel('Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy')
-                plt.xlabel('Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD')
-                plt.title('System {prot} from {ligand}: {y_var} vs {x_var}'.format(prot=protocol[-1], ligand=system,
+                plt.xlabel('Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD' if x is rmsd else 'Step')
+                plt.title('System {ligand} from {prot}: {y_var} vs {x_var}'.format(prot=protocol[-1], ligand=system,
                                                                                     y_var='Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy',
                                                                                     x_var='Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD'))
                 plt.tight_layout()
                 plt.savefig(f'{path_store}/{filename}')
+                plt.show()
                 plt.close()
 
             # Individual scatter plots
@@ -998,12 +1023,16 @@ class PELEAnalyzer:
             create_scatter_plot(rmsd, te, x_var_name='rmsd', y_var_name='te')
             create_scatter_plot(rmsd, be, x_var_name='rmsd', y_var_name='be')
             create_scatter_plot(rmsd, sasa, x_var_name='rmsd', y_var_name='sasa')
+            create_scatter_plot(step, be, x_var_name='step', y_var_name='be')
+            create_scatter_plot(step, te, x_var_name='step', y_var_name='te')
             create_scatter_plot(te, be, rmsd, x_var_name='te', y_var_name='be', color_var_name='rmsd')
+            create_scatter_plot(rmsd, be, c=step, x_var_name='rmsd', y_var_name='be', color_var_name='step')
+            create_scatter_plot(te, be, c=step, x_var_name='te', y_var_name='be', color_var_name='step')
 
             print(' - Storing images at {}'.format(path_store))
 
         path_store_system = directoryManager(protocol,system)
         simulation_path = simulationChecker(protocol, system)
-        te, be, sasa, rmsd = datasetRetriever(simulation_path)
-        plotter(path_store_system,protocol,system,te,be,sasa,rmsd)
+        te, be, sasa, rmsd, step = datasetRetriever(simulation_path)
+        plotter(path_store_system, protocol, system, te, be, sasa, rmsd, step)
     
