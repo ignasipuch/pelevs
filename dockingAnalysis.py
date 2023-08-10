@@ -355,6 +355,7 @@ class DockingAnalyzer:
 
             merged_df = pd.concat(dfs, ignore_index=True)
             merged_df.to_csv('3_docking_job/glide_score/glide_score.csv')
+            self.calculated_data = merged_df
 
     def _glideTimePlotter(self):
         """
