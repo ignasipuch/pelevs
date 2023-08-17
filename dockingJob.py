@@ -284,6 +284,15 @@ class DockingJob:
         def conversor(file_in, format_out, path_out):
             """
             Converts the input file to PDB format using Open Babel.
+
+            Parameters
+            ==========
+            file_in : str
+                Name of the file we want to convert.
+            format_out : str
+                Format we want to convert to.
+            path_out : str
+                Path to the directory we want the converted file to keep.
             """
 
             file = os.path.basename(file_in)
