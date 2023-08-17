@@ -277,9 +277,9 @@ class DockingJob:
             ligand.write(ligand_file)
             ligand.write(reference_ligand)
 
-            self.ligands = ligand_file
-            self.reference_ligand = ligand_file
-            self.receptor = receptor_file
+            self.ligands = os.path.basename(ligand_file.split('.')[0] + '.sdf')
+            self.reference_ligand = os.path.basename(ligand_file.split('.')[0] + '.sdf')
+            self.receptor = os.path.basename(receptor_file.split('.')[0] + '.mol2')
 
         def conversor(file_in, format_out, path_out):
             """
@@ -414,15 +414,14 @@ class DockingJob:
         elif protocol == 'score':
             parameter_file = os.path.join(
                 '3_docking_job/rdock_score/{}'.format(self.ligand_score), 'parameter_file.prm')
-
+            
         if not os.path.isfile(parameter_file):
             with open(parameter_file, 'w') as fileout:
                 fileout.writelines(
                     'RBT_PARAMETER_FILE_V1.00\n'
                     'TITLE rdock\n'
                     '\n'
-                    'RECEPTOR_FILE ' +
-                    receptor.split('.pdb')[0] + '.mol2' + '\n'
+                    'RECEPTOR_FILE ' + receptor + '\n'
                     'RECEPTOR_FLEX 3.0\n'
                     '\n'
                     '##################################################################\n'
@@ -546,7 +545,7 @@ class DockingJob:
             # Generating splitted ligand files
                 with open(path_split, 'w') as fileout:
                     fileout.writelines(
-                        'bash splitMols.sh {ligands_file} {cpus} ligands/split\n'.format(
+                        'bash splitMols.sh {ligands_file} {cpus} split\n'.format(
                             ligands_file=ligands, cpus=cpus_docking)
                     )
 
@@ -870,7 +869,7 @@ class DockingJob:
             self.receptor, self.reference_ligand, protocol)
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(ligands, cpus_docking, protocol)
-        self._rdockRunFilesGenerator(cpus_docking, protocol)
+        self._rdockRunFilesGenerator(cpus_docking, protocol, output_models)
 
     def setEquibindDocking(self, ligands, receptor):
         """
