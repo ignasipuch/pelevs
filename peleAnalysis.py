@@ -1011,6 +1011,8 @@ class PELEAnalyzer:
                 plt.title('System {ligand} from {prot}: {y_var} vs {x_var}'.format(prot=protocol[-1], ligand=system,
                                                                                     y_var='Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy',
                                                                                     x_var='Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD'))
+                if y is be:
+                    plt.ylim(top=0)
                 plt.tight_layout()
                 plt.savefig(f'{path_store}/{filename}')
                 plt.show()
