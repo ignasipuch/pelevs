@@ -85,7 +85,7 @@ class DockingAnalyzer:
         self.molecular_weight = None
         self.protocol = None
 
-    def _correlationPlotter(self, x, y, docking_method):
+    def _correlationPlotter(self, x, y, docking_method, protocol):
         """
         Makes a scatter plot of the two vectors' z-score
         and finds the correlation between them
@@ -120,8 +120,13 @@ class DockingAnalyzer:
         plt.plot(z_x, m_z*np.array(z_x) + n_z, color='orange',
                  label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r_z, p_z, len(x)))
         plt.legend(loc='best')
-        plt.savefig(
+        
+        if protocol == 'dock':
+            plt.savefig(
             '3_docking_job/images/{}_zscore_correlation.png'.format(docking_method), format='png')
+        if protocol == 'score':
+            plt.savefig(
+            '3_docking_job/images/rescoring_{}_zscore_correlation.png'.format(docking_method), format='png')
 
         m, n, r, p, _ = linregress(x, y)
 
@@ -135,8 +140,13 @@ class DockingAnalyzer:
         plt.plot(x, m*np.array(x) + n, color='orange',
                  label='r = {:.2f}\np = {:.2f}\nn = {}'.format(r, p, len(x)))
         plt.legend(loc='best')
-        plt.savefig(
+
+        if protocol == 'dock':
+            plt.savefig(
             '3_docking_job/images/{}_correlation.png'.format(docking_method), format='png')
+        if protocol == 'score':
+            plt.savefig(
+            '3_docking_job/images/rescoring_{}_correlation.png'.format(docking_method), format='png')
 
     def _molecularWeightCalculator(self):
         ''''
@@ -188,7 +198,7 @@ class DockingAnalyzer:
         plt.title('MW Distribution')
         plt.savefig('3_docking_job/images/mw_distribution.png', format='png')
 
-    def _doubleCorrelationPlotter(self, experimental, calculated, molecular_weights, docking_method):
+    def _doubleCorrelationPlotter(self, experimental, calculated, molecular_weights, docking_method, protocol):
         """
         Makes a scatter plot of the two first vectors against the third with z-score
         and finds the correlation between them.
@@ -248,8 +258,13 @@ class DockingAnalyzer:
         # General title for the entire figure
         fig.suptitle('MW vs Energy', fontsize=16)
         plt.tight_layout()
-        plt.savefig(
+        
+        if protocol == 'dock':
+            plt.savefig(
             '3_docking_job/images/{}_mw_zscore_correlation.png'.format(docking_method), format='png')
+        if protocol == 'score':
+            plt.savefig(
+            '3_docking_job/images/rescoring_{}_mw_zscore_correlation.png'.format(docking_method), format='png')
 
     def _glideDockingResultsChecker(self, protocol):
         """
@@ -569,7 +584,7 @@ class DockingAnalyzer:
             df = pd.read_csv('3_docking_job/rDock_rescore_data.csv')
             self.calculated_data = df
 
-    def _correlation(self, experimental_data, column_name):
+    def _correlation(self, experimental_data, column_name, protocol):
         """
         Uses _correlationPlotter to plot the calculated vs the
         experimental values of the energies involved in a docking.
@@ -604,8 +619,8 @@ class DockingAnalyzer:
         elif self.docking_tool == 'glide':
             y = df_calculated.r_i_docking_score.to_numpy()
 
-        self._correlationPlotter(x, y, self.docking_tool)
-        self._doubleCorrelationPlotter(x, y, mw, self.docking_tool)
+        self._correlationPlotter(x, y, self.docking_tool, protocol)
+        self._doubleCorrelationPlotter(x, y, mw, self.docking_tool, protocol)
 
         print(' - Correlation image generated succesfully')
         print(' - Molecular weight plots generated succesfully.')
@@ -656,4 +671,4 @@ class DockingAnalyzer:
         self._rdockDataFrameGenerator()
         self._rdockDataFrameTrimmer()
         self._molecularWeightCalculator()
-        self._correlation(experimental_data, column_name)
+        self._correlation(experimental_data, column_name, protocol)
