@@ -692,83 +692,60 @@ class DockingAnalyzer:
             Dataframe with all the sdf annotations data.
         """
 
+        def extract_property(mol, prop, default=0):
+            """
+            Extracts a property value from a molecule and converts it to a float.
+
+            Parameters
+            ==========
+            mol : RDKit Mol object
+                The molecule from which the property will be extracted.
+            prop : str
+                The name of the property to extract from the molecule.
+            default : float, optional
+                The default value to return if the property is missing or cannot be
+                converted to a float. Default is 0.
+
+            Returns
+            =======
+            value : float
+                The extracted property value as a float. If the property is missing or
+                cannot be converted to a float, the default value is returned.
+            """
+            try:
+                return float(mol.GetProp(prop))
+            except:
+                return default
+
         # Reading SDF
         supplier = Chem.SDMolSupplier(path_file)
-        
-        cont = 0
         sdf_dict = {}
 
-        for mol in supplier:
+        for cont, mol in enumerate(supplier):
             mol_dict = {}
 
             if mol is not None:
                 # Extract properties from the molecule
-                if protocol == 'dock':
-                    molecule_name = mol.GetProp('Name')
-                    molecule_conformer = mol.GetProp('s_lp_Variant')
-                elif protocol == 'score':
-                    molecule_name = mol.GetProp('Name').split('/')[-2]
-                    molecule_conformer = '-'
+                molecule_name = mol.GetProp('Name') if protocol == 'dock' else mol.GetProp('Name').split('/')[-2]
+                molecule_conformer = mol.GetProp('s_lp_Variant') if protocol == 'dock' else '-'
 
-                score = float(mol.GetProp('SCORE'))
-                inter_score = float(mol.GetProp('SCORE.INTER'))
-                inter_const = float(mol.GetProp('SCORE.INTER.CONST'))
-                inter_polar = float(mol.GetProp('SCORE.INTER.POLAR'))
-                inter_repul = float(mol.GetProp('SCORE.INTER.REPUL'))
-                inter_rot = float(mol.GetProp('SCORE.INTER.ROT'))
-                inter_vdw = float(mol.GetProp('SCORE.INTER.VDW'))
-                intra_score = float(mol.GetProp('SCORE.INTRA'))
-                intra_dihedral = float(mol.GetProp('SCORE.INTRA.DIHEDRAL'))
-                intra_dihedral_0 = float(mol.GetProp('SCORE.INTRA.DIHEDRAL.0'))
-                intra_polar = float(mol.GetProp('SCORE.INTRA.POLAR'))
-                intra_polar_0 = float(mol.GetProp('SCORE.INTRA.POLAR.0'))
-                intra_repul = float(mol.GetProp('SCORE.INTRA.REPUL'))
-                intra_repul_0 = float(mol.GetProp('SCORE.INTRA.REPUL.0'))
-                intra_vdw = float(mol.GetProp('SCORE.INTRA.VDW'))
-                intra_vdw_0 = float(mol.GetProp('SCORE.INTRA.VDW.0'))
-                system_score = float(mol.GetProp('SCORE.SYSTEM'))
-                system_const = float(mol.GetProp('SCORE.SYSTEM.CONST'))
-                system_dihedral = float(mol.GetProp('SCORE.SYSTEM.DIHEDRAL'))
-                system_polar = float(mol.GetProp('SCORE.SYSTEM.POLAR'))
-                system_repul = float(mol.GetProp('SCORE.SYSTEM.REPUL'))
-                system_vdw = float( mol.GetProp('SCORE.SYSTEM.VDW'))
-                
-                mol_dict['Name'] = molecule_name
-                mol_dict['Conformer'] = molecule_conformer
-                mol_dict['SCORE'] = score
-                mol_dict['SCORE.INTER'] = inter_score
-                mol_dict['SCORE.INTER.CONST'] = inter_const
-                mol_dict['SCORE.INTER.POLAR'] = inter_polar
-                mol_dict['SCORE.INTER.REPUL'] = inter_repul
-                mol_dict['SCORE.INTER.ROT'] = inter_rot
-                mol_dict['SCORE.INTER.VDW'] = inter_vdw
-                mol_dict['SCORE.INTRA'] = intra_score
-                mol_dict['SCORE.INTRA.DIHEDRAL'] = intra_dihedral
-                mol_dict['SCORE.INTRA.DIHEDRAL.0'] = intra_dihedral_0
-                mol_dict['SCORE.INTRA.POLAR'] = intra_polar
-                mol_dict['SCORE.INTRA.POLAR.0'] = intra_polar_0
-                mol_dict['SCORE.INTRA.REPUL'] = intra_repul
-                mol_dict['SCORE.INTRA.REPUL.0'] = intra_repul_0
-                mol_dict['SCORE.INTRA.VDW'] = intra_vdw
-                mol_dict['SCORE.INTRA.VDW.0'] = intra_vdw_0
-                mol_dict['SCORE.SYSTEM'] = system_score
-                mol_dict['SCORE.SYSTEM.CONST'] = system_const
-                mol_dict['SCORE.SYSTEM.DIHEDRAL'] = system_dihedral
-                mol_dict['SCORE.SYSTEM.POLAR'] = system_polar
-                mol_dict['SCORE.SYSTEM.REPUL'] = system_repul
-                mol_dict['SCORE.SYSTEM.VDW'] = system_vdw
-                mol_dict['STRAIN'] = intra_dihedral_0
-                mol_dict['CONST'] = inter_const + system_const
-                mol_dict['POLAR'] = inter_polar + intra_polar_0 + system_polar
-                mol_dict['REPUL'] = inter_repul + intra_repul_0 + system_repul
-                mol_dict['VDW'] = inter_vdw + intra_vdw_0 + system_vdw
-                mol_dict['DIHEDRAL'] = intra_dihedral_0 + system_dihedral
-                mol_dict['ELECTRO'] = inter_polar + intra_polar_0 + system_polar + inter_repul + intra_repul_0 + system_repul
+                properties = [
+                    'SCORE', 'SCORE.INTER', 'SCORE.INTER.CONST', 'SCORE.INTER.POLAR',
+                    'SCORE.INTER.REPUL', 'SCORE.INTER.ROT', 'SCORE.INTER.VDW',
+                    'SCORE.INTRA', 'SCORE.INTRA.DIHEDRAL', 'SCORE.INTRA.DIHEDRAL.0',
+                    'SCORE.INTRA.POLAR', 'SCORE.INTRA.POLAR.0', 'SCORE.INTRA.REPUL',
+                    'SCORE.INTRA.REPUL.0', 'SCORE.INTRA.VDW', 'SCORE.INTRA.VDW.0',
+                    'SCORE.SYSTEM', 'SCORE.SYSTEM.CONST', 'SCORE.SYSTEM.DIHEDRAL',
+                    'SCORE.SYSTEM.POLAR', 'SCORE.SYSTEM.REPUL', 'SCORE.SYSTEM.VDW'
+                ]
+
+                mol_dict.update({
+                    'Name': molecule_name,
+                    'Conformer': molecule_conformer,
+                    **{prop: extract_property(mol, prop) for prop in properties}
+                })
 
                 sdf_dict[cont] = mol_dict
-                
-                cont += 1
-            
+
         df = pd.DataFrame.from_dict(sdf_dict, orient="index")
-        
         return df
