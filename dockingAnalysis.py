@@ -648,7 +648,7 @@ class DockingAnalyzer:
         self._glideDockingResultsChecker(protocol)
         self._glideDataFrameRetriever(protocol)
         self._molecularWeightCalculator()
-        self._correlation(experimental_data, column_name)
+        self._correlation(experimental_data, column_name, protocol)
         self._glideTimePlotter()
 
     def rdockAnalysis(self, experimental_data, column_name, protocol='dock'):
