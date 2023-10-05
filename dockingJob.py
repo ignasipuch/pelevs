@@ -416,6 +416,8 @@ class DockingJob:
 
         print(' - Using {} as reference ligand to generated cavity and grid.'.format(reference_ligand))
 
+        receptor_mol2 = '{}.mol2'.format(receptor.split('.')[0])
+
         if protocol == 'dock':
             parameter_file = os.path.join(
                 '3_docking_job/job', 'parameter_file.prm')
@@ -430,7 +432,7 @@ class DockingJob:
                     'RBT_PARAMETER_FILE_V1.00\n'
                     'TITLE rdock\n'
                     '\n'
-                    'RECEPTOR_FILE ' + receptor + '\n'
+                    'RECEPTOR_FILE ' + receptor_mol2 + '\n'
                     'RECEPTOR_FLEX 3.0\n'
                     '\n'
                     '##################################################################\n'
