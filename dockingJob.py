@@ -390,6 +390,9 @@ class DockingJob:
         elif not os.path.isfile(reference_ligand):
             if os.path.isfile(os.path.join('3_docking_job/job', reference_ligand_name)):
                 pass
+            elif os.path.isfile(os.path.join('1_input_files/ligands', reference_ligand_name)):
+                shutil.copy(os.path.join('1_input_files/ligands', reference_ligand_name), os.path.join(
+                '3_docking_job/job', reference_ligand_name))
             else:
                 raise Exception(
                     'ReferenceLigandError: Tha path is not correct and it has not been found in 3_docking_job/job.')
