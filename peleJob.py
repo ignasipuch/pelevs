@@ -726,7 +726,7 @@ class PELE:
 
             else:
                 print(' - Splitting the outputted maegz file into individual pdbs.')
-                print(' - Only the best tautomer/stereoisomer in saved.')
+                print(' - Only the best tautomer/stereoisomer is saved.')
 
                 # Generating folder
                 os.mkdir(maegz_to_pdb_path)
