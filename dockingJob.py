@@ -600,7 +600,7 @@ class DockingJob:
                         '#SBATCH --ntasks=1\n'
                         '#SBATCH --output=rdock.out\n'
                         '#SBATCH --error=rdock.err\n'
-                        '#SBATCH --queue=' + queue + '\n'
+                        '#SBATCH --qos=' + queue + '\n'
                         '\n'
                         'module load rdock\n'
                         'module load ANACONDA/2019.10\n'
@@ -641,10 +641,11 @@ class DockingJob:
                     fileout.writelines(
                         '#!/bin/sh\n'
                         '#SBATCH --job-name=rdock' + str(i) + ' \n'
-                        '#SBATCH --time=01:00:00\n'
+                        '#SBATCH --time=' + time + '\n'
                         '#SBATCH --ntasks=1\n'
                         '#SBATCH --output=rdock.out\n'
                         '#SBATCH --error=rdock.err\n'
+                        '#SBATCH --qos=' + queue + '\n'
                         '\n'
                         'module load rdock\n'
                         'module load ANACONDA/2019.10\n'
@@ -950,4 +951,3 @@ class DockingJob:
         forcefield = 'OPLS2005'
 
         self._glidePrepareJob(grid_file, forcefield, protocol)
-        
