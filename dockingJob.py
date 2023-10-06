@@ -563,7 +563,7 @@ class DockingJob:
                             ligands_file=ligands, cpus=cpus_docking)
                     )
 
-    def _rdockRunFilesGenerator(self, cpus_docking, protocol, output_models):
+    def _rdockRunFilesGenerator(self, cpus_docking, protocol, output_models, queue, time):
         """
         Generate all the necessary runs to run an individual
         rDock simulation, to prepare the rDock simulation, and 
@@ -596,10 +596,11 @@ class DockingJob:
                     fileout.writelines(
                         '#!/bin/sh\n'
                         '#SBATCH --job-name=rdock' + str(i) + ' \n'
-                        '#SBATCH --time=01:00:00\n'
+                        '#SBATCH --time=' + time + '\n'
                         '#SBATCH --ntasks=1\n'
                         '#SBATCH --output=rdock.out\n'
                         '#SBATCH --error=rdock.err\n'
+                        '#SBATCH --queue=' + queue + '\n'
                         '\n'
                         'module load rdock\n'
                         'module load ANACONDA/2019.10\n'
@@ -608,7 +609,6 @@ class DockingJob:
                         'module load impi\n'
                         'module load gcc\n'
                         'module load boost/1.64.0\n'
-                        '\n'
                         '\n'
                         'rbdock -i ligands/split{val}.sd -o results/split{val}_out -r parameter_file.prm -p dock.prm -n {out} -allH\n'.format(
                             val=i, out=output_models))
@@ -854,7 +854,7 @@ class DockingJob:
 
         self._glidePrepareJob(grid_file, forcefield, protocol, output_models)
 
-    def setRdockDocking(self, reference_ligand, ligands, cpus_docking, output_models=50):
+    def setRdockDocking(self, reference_ligand, ligands, cpus_docking, output_models=50, queue='bsc_ls', time='01:00:00'):
         """
         Prepare the job folder to send an rDock docking job.
 
@@ -869,6 +869,11 @@ class DockingJob:
             Number of cpus to use for the rDock docking.
         output_models : int
             Number of output conformations.
+        queue : str
+            Queue of the machine you want to put in the run files (bsc_ls or debug).
+        time : str
+            Time you request to use the machine you send the job to. The format is: 
+            hours:minutes:seconds.
         """
 
         self.reference_ligand = reference_ligand
@@ -883,7 +888,7 @@ class DockingJob:
             self.receptor, self.reference_ligand, protocol)
         self._rdockGridGenerator(protocol)
         self._rdockJobSplitter(ligands, cpus_docking, protocol)
-        self._rdockRunFilesGenerator(cpus_docking, protocol, output_models)
+        self._rdockRunFilesGenerator(cpus_docking, protocol, output_models, queue, time)
 
     def setEquibindDocking(self, ligands, receptor):
         """
@@ -945,3 +950,4 @@ class DockingJob:
         forcefield = 'OPLS2005'
 
         self._glidePrepareJob(grid_file, forcefield, protocol)
+        
