@@ -139,7 +139,7 @@ class PELEAnalyzer:
 
         return folders_to_check
 
-    def _energyCalculator(self, dataset_location, system, path_system):
+    def _energyCalculator(self, dataset_location, system, path_system, sample):
         """
         First, retrieves the characteristics of all the simulations performed (docking protocol, forcefield, protein part, 
         perturbation level and rescoring). Second, for each individual simulation calculates scores of the different
@@ -240,9 +240,14 @@ class PELEAnalyzer:
                 elif directory in rescorings:
                     rescorings_param = directory
 
+            self.sampling = rescorings_param
+            self.protein_portion = truncated_param
+            self.forcefield = forcefield_param
+            self.perturbation_protocol = perturbation_param
+
             return docking_param, forcefield_param, truncated_param, perturbation_param, rescorings_param
 
-        def _energyInSimulation(path_system):
+        def _energyInSimulation(path_system, sample):
             """
             For each individual simulation calculates scores of the different
             metrics calculated in the PELE simulation.
@@ -262,7 +267,7 @@ class PELEAnalyzer:
                 List with the different scores calculated for the SASA.
             rmsd_list : list
                 List with the different scores calculated for the RMSD.
-            """            
+            """
 
             def minimum(vector):
                 return min(vector)
@@ -321,13 +326,44 @@ class PELEAnalyzer:
             list_epochs_og = [x for x in os.listdir(
                 path_system) if os.path.isdir(os.path.join(path_system, x))]
 
-            list_epochs = [str(x) for x in sorted([int(x) for x in list_epochs_og])]
+            list_epochs = [str(x) for x in sorted([int(x)
+                                                   for x in list_epochs_og])]
+            
+            if sample == 'all':
+                pass
+            else:
+                try:
+                    if sample == 'xshort' or sample == 'short':
+                        list_epochs = list_epochs[0]
+                    elif sample == 'long' or sample == 'xlong':
+                        list_epochs = list_epochs[0:6]
+                except IndexError:
+                    print("SampleError: The subsampling introduced is not compatible with the simulation carried out.\
+                             Please check that you have chosen a smaller sampling than the one in the simulation.")
 
             if len(list_epochs) != 0:
                 for epoch in list_epochs:
                     path_epoch = os.path.join(path_system, epoch)
-                    list_reports_og = [x for x in os.listdir(path_epoch) if x.startswith('report_')]
-                    list_report = sorted(list_reports_og, key=lambda x: int(x.split('_')[1]))
+                    list_reports_og = [x for x in os.listdir(
+                        path_epoch) if x.startswith('report_')]
+                    list_report = sorted(
+                        list_reports_og, key=lambda x: int(x.split('_')[1]))
+
+                    if sample == 'all':
+                        pass
+                    else:
+                        try:
+                            if sample == 'xshort':
+                                list_report = list_report[0:8]
+                            elif sample == 'short':
+                                list_report = list_report[0:16]
+                            elif sample == 'long':
+                                list_report = list_report[0:32]
+                            elif sample == 'xlong':
+                                list_report = list_report[0:48]
+                        except IndexError:
+                            print("SampleError: The subsampling introduced is not compatible with the simulation carried out.\
+                             Please check that you have chosen a smaller sampling than the simulation.")
 
                     for report in list_report:
 
@@ -393,7 +429,7 @@ class PELEAnalyzer:
 
         def _resultsToDictionary(docking_param, forcefield_param, truncated_param,
                                  perturbation_param, rescorings_param, system,
-                                 be_list, te_list, sasa_list, rmsd_list):
+                                 be_list, te_list, sasa_list, rmsd_list, sample):
             """
             Joins all the data into a single dataframe with all the information.
 
@@ -431,6 +467,9 @@ class PELEAnalyzer:
             sasa_min, sasa_bz, sasa_av, sasa_max = sasa_list
             rmsd_max, rmsd_av = rmsd_list
 
+            if sample is not 'all':
+                rescorings_param = sample
+
             simulation_data_dict = {'docking_tool': docking_param,
                                     'forcefield': forcefield_param,
                                     'protein_part': truncated_param,
@@ -459,10 +498,10 @@ class PELEAnalyzer:
         docking_param, forcefield_param, truncated_param, perturbation_param, rescorings_param = _PELEOptionsRetriever(
             dataset_location)
         be_list, te_list, sasa_list, rmsd_list = _energyInSimulation(
-            path_system)
+            path_system, sample)
         simulation_data_dict = _resultsToDictionary(docking_param, forcefield_param, truncated_param,
                                                     perturbation_param, rescorings_param, system,
-                                                    be_list, te_list, sasa_list, rmsd_list)
+                                                    be_list, te_list, sasa_list, rmsd_list, sample)
 
         return simulation_data_dict
 
@@ -500,7 +539,7 @@ class PELEAnalyzer:
                     path_input_data, experimental_data_file)
                 df = pd.read_csv(path_input_experimental_data, index_col=0)
                 print(
-                    ' - Experimental data found at {}'.format(path_input_experimental_data))
+                    ' -     Experimental data found at {}'.format(path_input_experimental_data))
             else:
                 raise Exception(
                     'MissingExperimentalData: The inputted path is not valid and experimental data has not been inputed previously. Please use the method .experimentalDataCollector to input the data.')
@@ -582,7 +621,7 @@ class PELEAnalyzer:
             '5_pele_analysis/Equibind_all_dataset.csv', index=False)
         self.equibind_data = combined_df
 
-    def PELEDataCollector(self):
+    def PELEDataCollector(self, sample='all'):
         """
         Generates all the folder hierarchy and calculates all the scores for all the 
         metrics in the PELE simulations. Then joins all this information into a dataframe.
@@ -605,12 +644,15 @@ class PELEAnalyzer:
 
                 if '-' in system:
                     simulation_data_dict = self._energyCalculator(
-                        dataset_location, system, path_system)
+                        dataset_location, system, path_system, sample)
                     all_data_dict[cont] = simulation_data_dict
                 else:
                     simulation_data_dict = self._energyCalculator(
-                        dataset_location, int(system), path_system)
+                        dataset_location, int(system), path_system, sample)
                     all_data_dict[cont] = simulation_data_dict
+
+        if sample is not 'all':
+            print(' -     Subsampling of the simulation successful: from {sampling} to {subsampling}.'.format(sampling=self.sampling,subsampling=sample))
 
         # Dataframe managing
         df_experimental = self.experimental_data
@@ -815,7 +857,7 @@ class PELEAnalyzer:
             Name of the system protein ligand we want to analyze.
         """
 
-        def directoryManager(protocol,system):
+        def directoryManager(protocol, system):
             '''
             Creates necessary directories for storing the analysis results.
 
@@ -836,7 +878,8 @@ class PELEAnalyzer:
 
             path_pele_analysis = '5_pele_analysis'
             path_analysis = os.path.join(path_pele_analysis, 'analysis')
-            path_system = os.path.join(path_analysis,'/'.join(protocol),system)
+            path_system = os.path.join(
+                path_analysis, '/'.join(protocol), system)
 
             # Generating folders
             if not os.path.isdir(path_pele_analysis):
@@ -850,7 +893,7 @@ class PELEAnalyzer:
 
             return path_system
 
-        def simulationChecker(protocol,system):
+        def simulationChecker(protocol, system):
             '''
             Checks the existence of the simulation results directory.
 
@@ -869,18 +912,20 @@ class PELEAnalyzer:
                 The path to the directory containing the simulation results for the specified system and protocol.
             '''
 
-            docking_tools = ['glide','rdock','equibind']
+            docking_tools = ['glide', 'rdock', 'equibind']
             path = '5_pele_analysis/simulations'
-            docking_method = [x for x in os.listdir(path) if x in docking_tools][0]
+            docking_method = [x for x in os.listdir(
+                path) if x in docking_tools][0]
 
-            path_simulation = os.path.join(path,docking_method,'/'.join(protocol),system)
+            path_simulation = os.path.join(
+                path, docking_method, '/'.join(protocol), system)
 
             if os.path.isdir(path_simulation):
                 print(' - Analyzing the simulation in \n\t{}'.format(path_simulation))
             else:
                 raise Exception('WrongPathError: The path {} does not exist. Please check how\
                                 the variable protocol has to be inputed.'.format(path_simulation))
-            
+
             return path_simulation
 
         def datasetRetriever(path_system):
@@ -917,18 +962,23 @@ class PELEAnalyzer:
             list_epochs_og = [x for x in os.listdir(
                 path_system) if os.path.isdir(os.path.join(path_system, x))]
 
-            list_epochs = [str(x) for x in sorted([int(x) for x in list_epochs_og])]
+            list_epochs = [str(x) for x in sorted([int(x)
+                                                   for x in list_epochs_og])]
 
             if len(list_epochs) != 0:
                 for epoch in list_epochs:
                     path_epoch = os.path.join(path_system, epoch)
-                    list_reports_og = [x for x in os.listdir(path_epoch) if x.startswith('report_')]
-                    list_report = sorted(list_reports_og, key=lambda x: int(x.split('_')[1]))
+                    list_reports_og = [x for x in os.listdir(
+                        path_epoch) if x.startswith('report_')]
+                    list_report = sorted(
+                        list_reports_og, key=lambda x: int(x.split('_')[1]))
 
                     for report in list_report:
                         if epoch == '0':
                             cont_steps = 1
-                        else: cont_steps = step_collector[os.path.join(str(int(epoch)-1),report)] + 1
+                        else:
+                            cont_steps = step_collector[os.path.join(
+                                str(int(epoch)-1), report)] + 1
 
                         path_report = os.path.join(path_epoch, report)
                         with open(path_report, 'r') as filein:
@@ -946,11 +996,12 @@ class PELEAnalyzer:
                                     rmsd.append(float(sline[6]))
                                     step.append(cont_steps)
 
-                                    step_collector[os.path.join(str(int(epoch)),report)] = cont_steps
+                                    step_collector[os.path.join(
+                                        str(int(epoch)), report)] = cont_steps
                                     cont_steps += 1
 
             return te, be, sasa, rmsd, step
-        
+
         def plotter(path_store, protocol, system, te, be, sasa, rmsd, step):
             '''
             Generates and stores scatter plots for the specific simulation data.
@@ -1006,11 +1057,13 @@ class PELEAnalyzer:
                     colorbar.set_label('Step', fontsize=12)
                     filename = f'{x_var_name}_{y_var_name}_{color_var_name}.png'
 
-                plt.ylabel('Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy')
-                plt.xlabel('Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD' if x is rmsd else 'Step')
+                plt.ylabel(
+                    'Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy')
+                plt.xlabel(
+                    'Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD' if x is rmsd else 'Step')
                 plt.title('System {ligand} from {prot}: {y_var} vs {x_var}'.format(prot=protocol[-1], ligand=system,
-                                                                                    y_var='Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy',
-                                                                                    x_var='Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD'))
+                                                                                   y_var='Binding Energy' if y is be else 'SASA' if y is sasa else 'Total Energy',
+                                                                                   x_var='Total Energy' if x is te else 'Binding Energy' if x is be else 'RMSD'))
                 if y is be:
                     plt.ylim(top=0)
                 plt.tight_layout()
@@ -1024,17 +1077,20 @@ class PELEAnalyzer:
             create_scatter_plot(be, sasa, x_var_name='be', y_var_name='sasa')
             create_scatter_plot(rmsd, te, x_var_name='rmsd', y_var_name='te')
             create_scatter_plot(rmsd, be, x_var_name='rmsd', y_var_name='be')
-            create_scatter_plot(rmsd, sasa, x_var_name='rmsd', y_var_name='sasa')
+            create_scatter_plot(
+                rmsd, sasa, x_var_name='rmsd', y_var_name='sasa')
             create_scatter_plot(step, be, x_var_name='step', y_var_name='be')
             create_scatter_plot(step, te, x_var_name='step', y_var_name='te')
-            create_scatter_plot(te, be, rmsd, x_var_name='te', y_var_name='be', color_var_name='rmsd')
-            create_scatter_plot(rmsd, be, c=step, x_var_name='rmsd', y_var_name='be', color_var_name='step')
-            create_scatter_plot(te, be, c=step, x_var_name='te', y_var_name='be', color_var_name='step')
+            create_scatter_plot(te, be, rmsd, x_var_name='te',
+                                y_var_name='be', color_var_name='rmsd')
+            create_scatter_plot(rmsd, be, c=step, x_var_name='rmsd',
+                                y_var_name='be', color_var_name='step')
+            create_scatter_plot(te, be, c=step, x_var_name='te',
+                                y_var_name='be', color_var_name='step')
 
             print(' - Storing images at {}'.format(path_store))
 
-        path_store_system = directoryManager(protocol,system)
+        path_store_system = directoryManager(protocol, system)
         simulation_path = simulationChecker(protocol, system)
         te, be, sasa, rmsd, step = datasetRetriever(simulation_path)
         plotter(path_store_system, protocol, system, te, be, sasa, rmsd, step)
-    
