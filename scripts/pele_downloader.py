@@ -86,7 +86,7 @@ def pele_reports_retriever(output_name):
                 folders_to_check.append(root)
                 
                 if not os.path.isdir(new_path):
-                    os.mkdir(new_path)
+                    os.makedirs(new_path)
 
         return folders_to_check
 

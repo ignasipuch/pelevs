@@ -29,6 +29,8 @@ class PELE:
         With the results of the Equibind docking, prepares a PELE simulation to be run at MN4.
     setEquibindToPELESimulation(self, rescoring_method, force_field, truncated, perturbation_protocol)
         With the results of the rDock docking, prepares a PELE simulation to be run at MN4.
+    PELEDownloader(self)
+        With all the simulations generated, creates a bash file to run all of them together.
 
     Hidden Methods
     ==============
@@ -289,6 +291,13 @@ class PELE:
     def _PDBConversor(self, file_in, path_out):
         """
         Converts the input file to PDB format using Open Babel.
+
+        Parameters
+        ==========
+        file_in : str
+            Name of the file to be converted.
+        path_out : str
+            Path to store the output file.
         """
 
         file_name, file_format = file_in.split('.')
@@ -341,19 +350,42 @@ class PELE:
             modified_lines = []
             residue_index = 1000
             previous_residue = None
+            previous_chain_residue = None
 
+            # Changeing residue number
             for line in lines:
+
+                # Change lines of the receptor
                 if line.startswith('ATOM'):
                     residue_letters = line[17:20].strip()
+                    chain_residue = line[21:26].strip()
 
-                    if residue_letters != previous_residue:
+                    if (residue_letters != previous_residue) or (chain_residue != previous_chain_residue):
                         residue_index += 1
 
                     line = line[:22] + str(residue_index) + line[26:]
                     modified_lines.append(line)
                     previous_residue = residue_letters
+                    previous_chain_residue = chain_residue
 
-                else: pass
+                elif line.startswith('TER'):
+                    pass
+
+                # Change lines of waters/metals
+                elif line.startswith('HETATM'):
+                    residue_letters = line[17:20].strip()
+                    chain_residue = line[21:26].strip()
+
+                    if (residue_letters != previous_residue) or (chain_residue != previous_chain_residue):
+                        residue_index += 1
+
+                    line = line[:22] + str(residue_index) + line[26:]
+                    modified_lines.append(line)
+                    previous_residue = residue_letters
+                    previous_chain_residue = chain_residue
+
+                else:
+                    pass
 
             # Write the modified lines back to the PDB file
             with open(file_mod_prot, 'w') as pdb_file:
@@ -518,18 +550,14 @@ class PELE:
             Path where the simulation is stored.
         pdb_file : str
             Name of the pdb file for which the yaml and run are needed.
-        forcefield_list : list
-            List with [bool, str] where the string is the forcefield chosen (or default)
-            and the bool indicates whether the forcefield option was chosen or default.
-        truncated_list : list
-            List with [bool, str] where the string is the protein portion chosen (or default)
-            and the bool indicates whether the protein portion option was chosen or default.
-        perturbation_list : list
-            List with [bool, str] where the string is the perturbation chosen (or default)
-            and the bool indicates whether the perturbation option was chosen or default.
-        rescoring_method_list : list
-            List with [bool, str] where the string is the rescoring method chosen (or default)
-            and the bool indicates whether the rescoring method  option was chosen or default.
+        force_field : str
+            Name of the forcefield chosen (or default)
+        truncated : str
+            Name of the protein portion chosen (or default)
+        perturbation_protocol : str
+            Name of the perturbation chosen (or default)
+        rescoring_method : str
+            Name of the rescoring method chosen (or default)
         """
 
         # YAML file generation
@@ -637,7 +665,7 @@ class PELE:
                 'module load impi\n'
                 'module load boost/1.64.0\n'
                 '\n'
-                'source activate /gpfs/projects/bsc72/conda_envs/nbdsuite/0.0.1b3\n'
+                'source activate /gpfs/projects/bsc72/conda_envs/nbdsuite/0.0.1b4\n'
                 '\n'
                 'python -m nbdsuite.main input.yaml\n'
             )
@@ -698,7 +726,10 @@ class PELE:
 
             else:
                 print(' - Splitting the outputted maegz file into individual pdbs.')
-                print(' - Only the best tautomer/stereoisomer in saved.')
+                print(' - Only the best tautomer/stereoisomer is saved.')
+
+                # Generating folder
+                os.mkdir(maegz_to_pdb_path)
 
                 os.system(
                     '$SCHRODINGER/run python3 dockprotocol/scripts/glide_to_pdb.py -jn {}'.format('glide_job'))
@@ -779,10 +810,9 @@ class PELE:
 
                 print(
                     ' - Merging the {} ligands to the receptor...'.format(len(os.listdir(docked_ligands_path))))
-                
 
                 # Merging all the inputs
-                for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
+                for ligand_folder in [x for x in os.listdir(pele_simulation_path) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
                     ligand_folder_path = os.path.join(
                         pele_simulation_path, ligand_folder)
                     receptor = [x for x in os.listdir(
@@ -792,7 +822,7 @@ class PELE:
                     self._PDBMerger(os.path.join(ligand_folder_path, receptor), os.path.join(
                         ligand_folder_path, ligand))
 
-            # Deleting openbabel merging information.  
+            # Deleting openbabel merging information.
             if os.path.isfile('out.txt'):
                 os.remove('out.txt')
 
@@ -800,7 +830,7 @@ class PELE:
                 ' - Generating yaml and run files.')
 
             # Generating yamls and runs
-            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
+            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
                 input_simulation_file = os.listdir(working_path)[0]
@@ -1026,10 +1056,11 @@ class PELE:
                 ' - Generating yaml and run files.')
 
             # Generating yamls and runs
-            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
+            for ligand_folder in [x for x in os.listdir(pele_simulation_path) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
-                input_simulation_file = os.listdir(working_path)[0]
+                input_simulation_file = [x for x in os.listdir(
+                    working_path) if x.endswith('.pdb')][0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
 
@@ -1113,8 +1144,10 @@ class PELE:
                     os.mkdir(os.path.join(pele_simulation_path, conformer))
 
             # Copying receptor
-            receptor = [x for x in os.listdir(receptor_origin) if x.endswith('.pdb')][0]
-            print(' - Reference receptor: {}'.format(os.path.join(receptor_origin,receptor)))
+            receptor = [x for x in os.listdir(
+                receptor_origin) if x.endswith('.pdb')][0]
+            print(
+                ' - Reference receptor: {}'.format(os.path.join(receptor_origin, receptor)))
 
             if not os.path.isdir(receptor_destination):
                 os.mkdir(receptor_destination)
@@ -1182,7 +1215,8 @@ class PELE:
             for ligand_folder in [x for x in os.listdir(pele_simulation_path) if x != '.ipynb_checkpoint']:
                 working_path = os.path.join(
                     pele_simulation_path, ligand_folder)
-                input_simulation_file = os.listdir(working_path)[0]
+                input_simulation_file = [x for x in os.listdir(
+                    working_path) if x.endswith('.pdb')][0]
                 self._PELESimulationFiles(working_path, input_simulation_file,
                                           force_field, truncated, perturbation_protocol, rescoring_method)
 
@@ -1210,21 +1244,21 @@ class PELE:
         as small as possible. This method is thought to be used after all the jobs wanted 
         have been generated.
         """
-        
+
         # Generating paths
         path_destination = self.docking_tool
         path_script = 'dockprotocol/scripts/pele_downloader.py'
         path_simulation = '4_pele_simulation'
         file_name = 'download_files.sh'
-        download_file_path = os.path.join(path_simulation,file_name)
+        download_file_path = os.path.join(path_simulation, file_name)
 
         # Copying script
-        shutil.copy(path_script,path_simulation)
+        shutil.copy(path_script, path_simulation)
 
         # Generating runner
         with open(download_file_path, 'w') as filein:
             filein.writelines(
                 'python pele_downloader.py -o {}'.format(path_destination)
             )
-        
+
         print(' - Run:\n   bash {}\n   After PELE simulations have been performed.'.format(file_name))

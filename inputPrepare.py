@@ -27,7 +27,7 @@ class InputPreparation:
         Prepare paths were inputs and outputs are going to be stored.
     """
 
-    def __init__(self, receptor, ligands):
+    def __init__(self, ligands):
         """
         Check inputted formats and prepare folder system for further
         processing.
@@ -40,12 +40,12 @@ class InputPreparation:
             Name of the csv file with SMILES and id.
         """
 
-        self.receptor = receptor
+        self.receptor = None
         self.ligands = ligands
         self.receptor_format = None
 
-        self._filesChecker(receptor, ligands)
-        self._prepareFolders(receptor, ligands)
+        self._filesChecker(self.receptor, self.ligands)
+        self._prepareFolders(self.receptor, self.ligands)
 
     def _filesChecker(self, receptor, ligands):
         """
@@ -75,15 +75,19 @@ class InputPreparation:
                 raise Exception(
                     'FormatLigandsError: The format of the ligand file should be a csv with smiles and id.')
 
-            receptor_file_format = receptor.split('.')[-1]
+            if receptor == None:
+                print(' -     No receptor was passed. Only ligPrep job will be possible.')
 
-            if (receptor_file_format == 'pdb') or (receptor_file_format == 'sd') or (receptor_file_format == 'sdf') or (receptor_file_format == 'mol2'):
-                self.receptor_format = receptor_file_format
-                print(
-                    ' -     The receptor is a(n) {} file.'.format(self.receptor_format))
             else:
-                raise Exception(
-                    'FormatLigandsError: The format of the ligand files is not supported')
+                receptor_file_format = receptor.split('.')[-1]
+
+                if (receptor_file_format == 'pdb') or (receptor_file_format == 'sd') or (receptor_file_format == 'sdf') or (receptor_file_format == 'mol2'):
+                    self.receptor_format = receptor_file_format
+                    print(
+                        ' -     The receptor is a(n) {} file.'.format(self.receptor_format))
+                else:
+                    raise Exception(
+                        'FormatLigandsError: The format of the ligand files is not supported')
 
     def _prepareFolders(self, receptor, ligands):
         """
@@ -97,22 +101,16 @@ class InputPreparation:
             Name of the csv file with SMILES and id.
         """
 
+        # Creating main directories
         if not os.path.isdir('1_input_files'):
             os.mkdir('1_input_files')
-
-        if not os.path.isdir('1_input_files/receptor'):
-            os.mkdir('1_input_files/receptor')
-        if not os.path.isdir('1_input_files/ligands'):
-            os.mkdir('1_input_files/ligands')
 
         if not os.path.isdir('2_ligprep_job'):
             os.mkdir('2_ligprep_job')
 
-        if len(os.listdir('1_input_files/receptor')) != 0:
-            pass
-        else:
-            shutil.move(receptor, os.path.join(
-                '1_input_files/receptor', receptor))
+        # Sorting ligands file
+        if not os.path.isdir('1_input_files/ligands'):
+            os.mkdir('1_input_files/ligands')
 
         if len(os.listdir('1_input_files/ligands')) != 0:
             pass
@@ -120,14 +118,23 @@ class InputPreparation:
             shutil.move(ligands, os.path.join(
                 '1_input_files/ligands', ligands))
 
-    def setUpLigPrepJob(self, ligands_input, ligands_output, pH=7., pH_tolerance=2., conformations=4):
+        # Sorting receptor file
+        if receptor is not None:
+            if not os.path.isdir('1_input_files/receptor'):
+                os.mkdir('1_input_files/receptor')
+
+            if len(os.listdir('1_input_files/receptor')) != 0:
+                pass
+            else:
+                shutil.move(receptor, os.path.join(
+                    '1_input_files/receptor', receptor))
+        
+    def setUpLigPrepJob(self, ligands_output='ligands_out', pH=7., pH_tolerance=2., conformations=4):
         """
         Generate a job folder with necessary files to launch a ligprep job.
 
         Parameters
         ==========
-        ligands_input : str
-            Name of the csv file with ligands.
         ligands_output : str
             Name of the ligprep output.
         pH : float
@@ -137,6 +144,8 @@ class InputPreparation:
         conformations : int
             Maximum number of conformations per inputted ligand.
         """
+
+        ligands_input = self.ligands
 
         if not os.path.isdir('2_ligprep_job/job'):
             os.mkdir('2_ligprep_job/job')

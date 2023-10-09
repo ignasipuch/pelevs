@@ -43,17 +43,24 @@ def parse_args(args):
 def glide_pdb(job_name):
 
     def indeces_maegz(path_csv):
+
+        # Sorting csv to match maegz structures indeces and sorting by energy
         df = pd.read_csv(path_csv)
-        df_sorted = df.sort_values('r_i_glide_gscore')
-        df_result = df_sorted.drop_duplicates(['title', 'i_i_glide_lignum'])
+        df_csv_sort = df.sort_values('r_i_docking_score').reset_index(drop=True)
+
+        # Droping duplicates and only keeping best energies
+        df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
         sorted_df = df_result.sort_values(['title','i_i_glide_lignum'])
 
+        # Saving best conformers
         sorted_df.to_csv('3_docking_job/job/{}.csv'.format('best_scores_conformers'))
 
-        sorted_df = sorted_df.sort_values('r_i_glide_gscore')
+        # Only keeping one conformer per ligand
+        sorted_df = sorted_df.sort_values('r_i_docking_score')
         sorted_df = sorted_df.drop_duplicates('title')
         sorted_df = sorted_df.sort_values('title')
 
+        # Saving best ligands
         sorted_df.to_csv('3_docking_job/job/{}.csv'.format('best_scores_ligands'))
 
         indeces = []
@@ -70,7 +77,7 @@ def glide_pdb(job_name):
     path = str(pathlib.Path().absolute())
     path_input = os.path.join(path, '3_docking_job/job/{}'.format(job_name + '.csv'))
     path_maegz = os.path.join(path, '3_docking_job/job/{}'.format(job_name + '_pv.maegz'))
-    output_directory = '3_docking_job/job/output_pdb_files/'
+    output_directory = '3_docking_job/job/output_pdb_files'
 
     # Creating output directory
     if not os.path.isdir(output_directory):
@@ -84,11 +91,11 @@ def glide_pdb(job_name):
     for i, st in enumerate(structure_reader):
         if i in indeces:
             index = indeces.index(i)
-            pdb_filename = f'{output_directory}{str(molecules[index])}.pdb'
+            pdb_filename = os.path.join(output_directory, '{}.pdb'.format(str(molecules[index])))
             structure_writer = structure.StructureWriter(pdb_filename)
             structure_writer.append(st)
             structure_writer.close()
-    
+
 def main(args):
     """
     Function
