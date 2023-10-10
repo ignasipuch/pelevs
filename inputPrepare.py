@@ -42,6 +42,7 @@ class InputPreparation:
 
         self.receptor = None
         self.ligands = ligands
+        self.ligands_file = os.path.basename(ligands)
         self.receptor_format = None
 
         self._filesChecker(self.receptor, self.ligands)
@@ -71,12 +72,14 @@ class InputPreparation:
                 else:
                     raise Exception(
                         'FormatLigandsError: The format of the ligand file should be a csv with smiles and id.')
+            elif ligands_format == 'pdb':
+                print(' -     The ligand was passed in a pdb.')  
             else:
                 raise Exception(
                     'FormatLigandsError: The format of the ligand file should be a csv with smiles and id.')
 
             if receptor == None:
-                print(' -     No receptor was passed. Only ligPrep job will be possible.')
+                print(' -     No receptor was passed. Only ligand-related jobs will be possible.')
 
             else:
                 receptor_file_format = receptor.split('.')[-1]
@@ -105,18 +108,15 @@ class InputPreparation:
         if not os.path.isdir('1_input_files'):
             os.mkdir('1_input_files')
 
-        if not os.path.isdir('2_ligprep_job'):
-            os.mkdir('2_ligprep_job')
-
         # Sorting ligands file
         if not os.path.isdir('1_input_files/ligands'):
             os.mkdir('1_input_files/ligands')
 
-        if len(os.listdir('1_input_files/ligands')) != 0:
-            pass
+        if os.path.isfile(os.path.join('1_input_files/ligands', self.ligands_file)):
+            print(' -     Ligand file is already in 1_input_files/ligands.')
         else:
             shutil.move(ligands, os.path.join(
-                '1_input_files/ligands', ligands))
+                '1_input_files/ligands', self.ligands_file))
 
         # Sorting receptor file
         if receptor is not None:
@@ -127,7 +127,7 @@ class InputPreparation:
                 pass
             else:
                 shutil.move(receptor, os.path.join(
-                    '1_input_files/receptor', receptor))
+                    '1_input_files/receptor',  os.path.basename(receptor)))
         
     def setUpLigPrepJob(self, ligands_output='ligands_out', pH=7., pH_tolerance=2., conformations=4):
         """
@@ -147,6 +147,9 @@ class InputPreparation:
 
         ligands_input = self.ligands
 
+        if not os.path.isdir('2_ligprep_job'):
+            os.mkdir('2_ligprep_job')
+
         if not os.path.isdir('2_ligprep_job/job'):
             os.mkdir('2_ligprep_job/job')
 
@@ -156,3 +159,61 @@ class InputPreparation:
 
         shutil.copy('1_input_files/ligands/{}'.format(ligands_input),
                     '2_ligprep_job/job')
+
+    def setUpQMParametrization(self):
+        """
+        Generate a job folder with necessary files to launch a qm parametrization job.
+        """
+
+        def _ligandFormatChecker():
+            """
+            Check format of the ligand to begin preparation of the job.
+            """
+
+            possible_formats = ['pdb','mae']
+            if self.ligands_file.split('.')[1] in possible_formats:
+                pass
+            else:
+                raise Exception('LifandFormatError: This method only accepts either pdb or mae format for the ligand. Please check the format is correct.')
+
+        def _generateDirectory():
+            """
+            Generate directories to store all the files.
+            """
+
+            ligand = self.ligands_file.split('.')[0]
+            qm_path = '1_input_files/qm'
+            qm_job_path = os.path.join(qm_path,ligand,'qm_job')
+            ligands_folder_path = '1_input_files/ligands/'
+            script_path = 'dockprotocol/scripts/qm.py'
+
+            if not os.path.isdir(qm_path):
+                os.mkdir(qm_path)            
+            if not os.path.isdir(qm_job_path):
+                os.makedirs(qm_job_path)
+
+            print(' -     Setting up a qm parametrization job at: {}.'.format(qm_job_path))
+            print(' -     Ligand to parametrize: {}.'.format(ligand))
+
+            ligand_path = os.path.join(ligands_folder_path,self.ligands_file)
+
+            shutil.copy(ligand_path, qm_job_path)
+            shutil.copy(script_path, qm_job_path)
+
+            return ligand
+
+        def _generateRun(ligand):
+            """
+            Generate a run file to send the job in a local machine.
+            """
+
+            run_path = '1_input_files/qm/{}/qm_job/run.sh'.format(ligand)
+
+            with open(run_path, 'w') as filein:
+                filein.writelines('$SCHRODINGER/run python3 qm.py -f {}\n'.format(self.ligands))
+
+            print(' -     Send job to local machine (cactus, bubbles, blossom) to send job.')
+
+        _ligandFormatChecker()
+        ligand = _generateDirectory()
+        _generateRun(ligand)
