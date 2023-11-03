@@ -597,12 +597,13 @@ class DockingAnalyzer:
             Name of the column where the data in the csv is stored.
         """
 
-        file_name = experimental_data.split('/')[-1]
+        file_name = os.path.basename(experimental_data)
 
         # Move experimental data to input data
         if not os.path.isdir('1_input_files/experimental_energies'):
             os.mkdir('1_input_files/experimental_energies')
-            shutil.move(file_name, '1_input_files/experimental_energies/')
+        
+        shutil.copy(experimental_data, '1_input_files/experimental_energies/')
 
         df_experimental = pd.read_csv(os.path.join(
             '1_input_files/experimental_energies/', file_name), index_col=0)
