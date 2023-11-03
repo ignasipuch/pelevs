@@ -1,4 +1,4 @@
-GRIDFILE   original_input/gpcr_grid.zip
+GRIDFILE   gpcr_grid.zip
 PRECISION   SP
 LIGANDFILE   ligands_out.sdf
 FORCEFIELD   OPLS_2005
