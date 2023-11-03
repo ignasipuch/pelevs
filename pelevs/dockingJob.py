@@ -164,7 +164,7 @@ class DockingJob:
         docking_job_path = '3_docking_job/job'
         ligprep_path = '2_ligprep_job/job/'
         glide_score_path = '3_docking_job/glide_score'
-        grid_file_name = os.path.base(grid_file)
+        grid_file_name = os.path.basename(grid_file)
 
         if protocol == 'dock':
             shutil.copy(grid_file, docking_job_path)
