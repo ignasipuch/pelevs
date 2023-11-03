@@ -1,9 +1,10 @@
-Bio==1.5.9
-matplotlib==3.7.2
-MDAnalysis==2.5.0
+Bio==1.6.0
+matplotlib==3.8.1
+MDAnalysis==2.6.1
 numpy==1.17.4
 openbabel==3.1.1.1
-pandas==2.0.3
-rdkit==2023.3.2
-scipy==1.11.1
-seaborn==0.12.2
+pandas==2.1.2
+rdkit==2023.9.1
+scipy==1.11.3
+seaborn==0.13.0
+setuptools==61.2.0
