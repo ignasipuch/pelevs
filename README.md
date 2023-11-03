@@ -29,13 +29,13 @@ E --> F[Analysis]
 
 #### 1.1. Ligprep
 
-Generation of tautomers and isomers as well as protonation of the inhibitor ligands in selected pH +- pH_tolerance.
+Generation of tautomers and isomers as well as protonation and 3D conformation of the inhibitor ligands in selected pH +- pH_tolerance.
 
 ---
 
 ### 2. Docking
 
-Docking of the inhibitors to the target or rescoring docked poses.
+Docking of the inhibitors to the target or rescoring docked poses. You will need a **grid** file for the Glide dockings. For the analysis you will need **experimental data** with which compare.
 
 **Modules:** 
 1. dockingJob.py 
