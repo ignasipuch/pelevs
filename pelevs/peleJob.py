@@ -3,6 +3,8 @@ import shutil
 from openbabel import openbabel as ob
 import re
 import pandas as pd
+import importlib.resources
+import pelevs
 
 
 class PELEJob:
@@ -732,7 +734,7 @@ class PELEJob:
                 os.mkdir(maegz_to_pdb_path)
 
                 os.system(
-                    '$SCHRODINGER/run python3 dockprotocol/scripts/glide_to_pdb.py -jn {}'.format('glide_job'))
+                    '$SCHRODINGER/run python3 scripts/glide_to_pdb.py -jn {}'.format('glide_job'))
 
         def _glideDockingPoseRetriever(simulation_path):
             """
