@@ -27,7 +27,7 @@ class InputPreparation:
         Prepare paths were inputs and outputs are going to be stored.
     """
 
-    def __init__(self, ligands):
+    def __init__(self, ligands, receptor=None):
         """
         Check inputted formats and prepare folder system for further
         processing.
@@ -40,7 +40,7 @@ class InputPreparation:
             Name of the csv file with SMILES and id.
         """
 
-        self.receptor = None
+        self.receptor = receptor
         self.ligands = ligands
         self.ligands_file = os.path.basename(ligands)
         self.receptor_format = None
@@ -115,7 +115,7 @@ class InputPreparation:
         if os.path.isfile(os.path.join('1_input_files/ligands', self.ligands_file)):
             print(' -     Ligand file is already in 1_input_files/ligands.')
         else:
-            shutil.move(ligands, os.path.join(
+            shutil.copy(ligands, os.path.join(
                 '1_input_files/ligands', self.ligands_file))
 
         # Sorting receptor file
@@ -126,7 +126,7 @@ class InputPreparation:
             if len(os.listdir('1_input_files/receptor')) != 0:
                 pass
             else:
-                shutil.move(receptor, os.path.join(
+                shutil.copy(receptor, os.path.join(
                     '1_input_files/receptor',  os.path.basename(receptor)))
         
     def setUpLigPrepJob(self, ligands_output='ligands_out', pH=7., pH_tolerance=2., conformations=4):
@@ -145,7 +145,7 @@ class InputPreparation:
             Maximum number of conformations per inputted ligand.
         """
 
-        ligands_input = self.ligands
+        ligands_input = self.ligands_file
 
         if not os.path.isdir('2_ligprep_job'):
             os.mkdir('2_ligprep_job')
