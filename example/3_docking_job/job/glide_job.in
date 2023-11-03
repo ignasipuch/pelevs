@@ -1,0 +1,6 @@
+GRIDFILE   original_input/gpcr_grid.zip
+PRECISION   SP
+LIGANDFILE   ligands_out.sdf
+FORCEFIELD   OPLS_2005
+POSES_PER_LIG   10
+POSTDOCK_NPOSE   10
