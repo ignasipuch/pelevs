@@ -1,0 +1,7 @@
+,SMILES,title,conformer,i_i_glide_lignum,r_glide_cpu_time,r_i_docking_score
+26,COc1cc2c3c(cccc3c1)C(=O)N(CC1CC[NH+](C[C@@H](O)COc3cccc4[nH]c5ccccc5c34)CC1)C2=O,0,2,2,7.71,-7.38283
+0,CC(C)(C)[NH2+]C[C@H](O)COc1cccc2[nH]c(=O)[nH]c12,1,2,4,38.51,-10.0225
+12,CC(C)(NC(=O)CBr)[C@H]1CC[C@](C)([NH2+]C[C@@H](O)COc2cccc3[nH]ccc23)CC1,2,2,6,22.68,-8.08927
+6,CC(C)[NH2+]C[C@@H](O)COc1cccc2[nH]ccc12,3,2,8,40.92,-8.80903
+5,CC(C)(NC(=O)CBr)[C@H]1CC[C@](C)([NH2+]C[C@@H](O)COc2cccc3[nH]c(C#N)cc23)CC1,4,2,10,19.82,-8.89705
+14,COc1ccccc1OCC[NH2+]C[C@@H](O)COc1cccc2[nH]c3ccccc3c12,5,2,12,27.5,-7.96123
