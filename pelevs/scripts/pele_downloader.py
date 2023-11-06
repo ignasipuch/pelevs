@@ -33,6 +33,11 @@ def parse_args(args):
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-a", "--analysis_folder_name", type=str, dest="analysis_folder_name",
+                        default=None, help="Name of the folder we want to analyze.")
+    parser.add_argument("-p", "--protocol_name", type=str, dest="protocol_name",
+                        default=None, help="Name of the folder that contains all the simulations with all the ligands.")
+    
     parser.add_argument("-o", "--ouput_name", type=str, dest="output_name",
                         default=None, help="Name of the folder to be created.")
     
@@ -40,7 +45,9 @@ def parse_args(args):
 
     return parsed_args
 
-def pele_reports_retriever(output_name):
+def pele_reports_retriever(analysis_folder_name,
+                           protocol_name,
+                           output_name):
     """
     Function
     ----------
@@ -53,7 +60,9 @@ def pele_reports_retriever(output_name):
         Name of the folder where the data is going to be stored.
     """   
 
-    def folders_with_simulations(output_name):
+    def folders_with_simulations(analysis_folder_name,
+                                 protocol_name,
+                                 output_name):
         """
         Function
         ----------
@@ -78,11 +87,17 @@ def pele_reports_retriever(output_name):
 
         folders_to_check = []
         rescorings = ['xshort','short','long','xlong','xxlong']
+
+        if protocol_name is not None:
+            rescorings.append(protocol_name)
+
+        if analysis_folder_name is None:
+            analysis_folder_name = 'pele_simulation/'
         
-        for root, _, _ in os.walk('pele_simulation/'):
+        for root, _, _ in os.walk('{}/'.format(analysis_folder_name)):
 
             if os.path.basename(root) in rescorings:
-                new_path = root.replace('pele_simulation', output_name)
+                new_path = root.replace(analysis_folder_name, output_name)
                 folders_to_check.append(root)
                 
                 if not os.path.isdir(new_path):
@@ -90,7 +105,9 @@ def pele_reports_retriever(output_name):
 
         return folders_to_check
 
-    def dataset_retriever(output_name, folders_to_check):
+    def dataset_retriever(analysis_folder_name, 
+                          output_name, 
+                          folders_to_check):
         """
         Function
         ----------
@@ -111,7 +128,9 @@ def pele_reports_retriever(output_name):
             List of simulation's paths where the simulations have failed.
         """  
 
-        def simulation_retriever(output_name, simulation_path):
+        def simulation_retriever(analysis_folder_name,
+                                 output_name, 
+                                 simulation_path):
             """
             Function
             ----------
@@ -135,10 +154,15 @@ def pele_reports_retriever(output_name):
                 Boolean indicating whether the simulation has failed or not.
             """  
 
+            if analysis_folder_name is None:
+                analysis_folder_name = 'pele_simulation'
+
             system = simulation_path.split('/')[-1]
             rescoring_path = '/'.join(simulation_path.split('/')[:-1])
-            nbd_suite_path = '6_adaptive_pele_simulation/complex_2/output'
-            ligand_folder = simulation_path.replace('pele_simulation', output_name)
+            adaptive_simulation_path = '6_adaptive_pele_simulation/'
+            complex_name = [x for x in os.listdir(os.path.join(simulation_path,system,adaptive_simulation_path)) if x.startswith('complex')][0]
+            nbd_suite_path = '6_adaptive_pele_simulation/{}/output'.format(complex_name)
+            ligand_folder = simulation_path.replace(analysis_folder_name, output_name)
 
             whole_path = os.path.join(simulation_path,system,nbd_suite_path)
             
@@ -164,23 +188,28 @@ def pele_reports_retriever(output_name):
             return rescoring_path, system, failed_bool
 
         failed_simulations = []
+
+        if analysis_folder_name is None:
+            analysis_folder_name = 'pele_simulation/' 
                
         for folder in folders_to_check:
             for simulation in os.listdir(folder):
                 simulation_path = os.path.join(folder,simulation)
 
                 if os.path.isdir(simulation_path):
-                    ligand_folder = simulation_path.replace('pele_simulation', output_name)
+                    ligand_folder = simulation_path.replace(analysis_folder_name, output_name)
 
                     if not os.path.isdir(ligand_folder):
                         os.mkdir(ligand_folder)
                         
-                    rescoring_path, system, failed_bool = simulation_retriever(output_name, simulation_path) 
+                    rescoring_path, system, failed_bool = simulation_retriever(analysis_folder_name,
+                                                                               output_name, 
+                                                                               simulation_path) 
                     
                     if failed_bool:
                         failed_simulations.append(os.path.join(rescoring_path,system))
         
-        print(' - All report files copied successfully.')
+        print(' - Process complete.')
 
         return failed_simulations
 
@@ -207,9 +236,14 @@ def pele_reports_retriever(output_name):
         print(' - Total number of failed simulations: {}.'.format(len(failed_simulations)))
         print(' - All data about failed simulations stored in failed_simulations.csv.')
 
-    folders_to_check = folders_with_simulations(output_name)
-    failed_simulations = dataset_retriever(output_name, folders_to_check)
-    failed_simulations_writer(output_name, failed_simulations)
+    folders_to_check = folders_with_simulations(analysis_folder_name,
+                                                protocol_name,
+                                                output_name)
+    failed_simulations = dataset_retriever(analysis_folder_name,
+                                           output_name,
+                                           folders_to_check)
+    failed_simulations_writer(output_name,
+                              failed_simulations)
     
 def main(args):
     """
@@ -223,7 +257,9 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
-    pele_reports_retriever(output_name=args.output_name)
+    pele_reports_retriever(analysis_folder_name=args.analysis_folder_name,
+                           protocol_name=args.protocol_name,
+                           output_name=args.output_name)
 
 if __name__ == '__main__':
 
