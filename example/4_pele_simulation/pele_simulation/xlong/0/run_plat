@@ -1,0 +1,15 @@
+#!/bin/bash
+#SBATCH -J 0
+#SBATCH --output=PELE.out
+#SBATCH --error=PELE.err
+#SBATCH --ntasks=48
+#SBATCH --time=00-06:00:00
+
+module load ANACONDA/2019.10
+module load intel mkl impi gcc # 2> /dev/null
+module load impi
+module load boost/1.64.0
+
+source activate /gpfs/projects/bsc72/conda_envs/nbdsuite/0.0.1b4
+
+python -m nbdsuite.main input.yaml

@@ -1,0 +1,14 @@
+complex_data: "1.pdb"
+complex_ligand_selection: "L:900"
+static_name: false
+name: "1"
+verbosity: info
+flexible_region_radius: 8
+frozen_region_radius: 13
+pele_perturbation_level: 2
+pele_forcefield: opls2005
+pele_steps: 25
+adaptive_epochs: 5
+cpus: 48
+pipeline:
+   - flow: induced_fit_refinement
