@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+This script is designed to optimize and calculate resp charges. It yeilds the necessary
+files for peleffy to generate a DataLocal file.
+"""
+
+__author__ = "Ignasi Puch-Giner "
+__maintainer__ = "Ignasi Puch-Giner"
+__email__ = "ignasi.puchginer@bsc.es"
+
 from schrodinger import structure
 from schrodinger.application.jaguar.input import JaguarInput
 from schrodinger.structure import StructureReader
