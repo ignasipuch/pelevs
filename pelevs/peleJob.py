@@ -1240,7 +1240,7 @@ class PELEJob:
                                     forcefield_list[1], truncated_list[1], perturbation_list[1], rescoring_method_list[1])
         self._PELERunner(simulation_path)
 
-    def PELEDownloader(self):
+    def PELEDownloader(self, analysis_folder_name=None, protocol_name=None, simulation_folder_name=None, output_name=None):
         """
         Generates and copies files in order to make the volume of data downloaded
         as small as possible. This method is thought to be used after all the jobs wanted 
@@ -1248,19 +1248,44 @@ class PELEJob:
         """
 
         # Generating paths
-        path_destination = self.docking_tool
-        path_script = 'dockprotocol/scripts/pele_downloader.py'
+        if output_name is None:
+            if self.docking_tool is None:
+                if analysis_folder_name is None:
+                    path_destination = 'analysis'
+                else:
+                    path_destination = '{}_analysis'.format(analysis_folder_name)
+            else:
+                path_destination = self.docking_tool
+        else:
+            path_destination = output_name
+
+        path_script = 'scripts/pele_downloader.py'
         path_simulation = '4_pele_simulation'
+
+        if not os.path.isdir(path_simulation):
+            print(' - Warning: 4_pele_simulation not found. Generating files in download/.')
+            path_simulation = 'download'
+            if not os.path.isdir(path_simulation):
+                os.mkdir(path_simulation)
+
         file_name = 'download_files.sh'
         download_file_path = os.path.join(path_simulation, file_name)
 
         # Copying script
         shutil.copy(path_script, path_simulation)
 
+
+        
         # Generating runner
-        with open(download_file_path, 'w') as filein:
-            filein.writelines(
-                'python pele_downloader.py -o {}'.format(path_destination)
-            )
+        if protocol_name is not None:
+            with open(download_file_path, 'w') as filein:
+                filein.writelines(
+                    'python pele_downloader.py -a {analysis} -p {protocol} -o {output}'.format(analysis=analysis_folder_name, protocol=protocol_name, output=path_destination)
+                )
+        else:
+            with open(download_file_path, 'w') as filein:
+                filein.writelines(
+                    'python pele_downloader.py -a {analysis} -o {output}'.format(analysis=analysis_folder_name, output=path_destination)
+                )
 
         print(' - Run:\n   bash {}\n   After PELE simulations have been performed.'.format(file_name))
