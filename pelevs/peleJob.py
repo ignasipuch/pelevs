@@ -753,6 +753,7 @@ class PELEJob:
             """
 
             maegz_to_pdb_path = '3_docking_job/job/output_pdb_files'
+            glide_to_pdb_file = 'glide_to_pdb.py'
 
             if os.path.isdir(maegz_to_pdb_path):
                 print(' - Splitting of the maegz file already done.')
@@ -763,9 +764,9 @@ class PELEJob:
 
                 # Generating folder
                 os.mkdir(maegz_to_pdb_path)
+                self._copyScriptFile('.',glide_to_pdb_file)
 
-                os.system(
-                    '$SCHRODINGER/run python3 scripts/glide_to_pdb.py -jn {}'.format('glide_job'))
+                os.system('$SCHRODINGER/run python3 {run_file} -jn {job}'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
 
         def _glideDockingPoseRetriever(simulation_path):
             """
