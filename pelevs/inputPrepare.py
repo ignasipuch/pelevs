@@ -1,7 +1,8 @@
 import os
 import shutil
 import pandas as pd
-
+from pkg_resources import resource_stream, Requirement, resource_listdir
+import io
 
 class InputPreparation:
     """
@@ -47,6 +48,37 @@ class InputPreparation:
 
         self._filesChecker(self.receptor, self.ligands)
         self._prepareFolders(self.receptor, self.ligands)
+
+    def _copyScriptFile(self, output_folder, script_name, no_py=False, subfolder=None, hidden=True):
+        """
+        Copy a script file from the pelevs package.
+
+        Parameters
+        ==========
+
+        """
+        # Get script
+        path = "pelevs"
+        if subfolder != None:
+            path = path+'/'+subfolder
+
+        path_file = os.path.join(path,script_name)
+        package = Requirement.parse("pelevs")
+        script_file = resource_stream(package,path_file)
+        script_file = io.TextIOWrapper(script_file)
+
+        # Write control script to output folder
+        if no_py == True:
+            script_name = script_name.replace('.py', '')
+
+        if hidden:
+            output_path = output_folder+'/._'+script_name
+        else:
+            output_path = output_folder+'/'+script_name
+
+        with open(output_path, 'w') as sof:
+            for l in script_file:
+                sof.write(l)
 
     def _filesChecker(self, receptor, ligands):
         """
@@ -185,7 +217,8 @@ class InputPreparation:
             qm_path = '1_input_files/qm'
             qm_job_path = os.path.join(qm_path,ligand,'qm_job')
             ligands_folder_path = '1_input_files/ligands/'
-            script_path = 'dockprotocol/scripts/qm.py'
+            script_name = 'qm.py'
+            
 
             if not os.path.isdir(qm_path):
                 os.mkdir(qm_path)            
@@ -196,9 +229,9 @@ class InputPreparation:
             print(' -     Ligand to parametrize: {}.'.format(ligand))
 
             ligand_path = os.path.join(ligands_folder_path,self.ligands_file)
-
             shutil.copy(ligand_path, qm_job_path)
-            shutil.copy(script_path, qm_job_path)
+            
+            self._copyScriptFile(qm_job_path,script_name,hidden=False)
 
             return ligand
 
