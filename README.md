@@ -3,6 +3,10 @@
 
 Repository to create a concrete workflow to work with in drug discovery projects.
 
+## Requirements
+
+Other than the requirements specified at requirements.txt, you should have installed the Schrödinger's suite.
+
 
 ## Workflow
 
