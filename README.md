@@ -29,7 +29,7 @@ E --> F[Analysis]
 
 **- Class:** InputPreparation
 
-**- Methods:** setUpLigPrepJob
+**- Methods:** setUpLigPrepJob, and setUpQMParametrization
 
 #### 1.1. Ligprep
 
@@ -46,13 +46,13 @@ Docking of the inhibitors to the target or rescoring docked poses. You will need
 
 	**- Class:** DockingJob
 	
-	**- Methods:** setGlideDocking, setRdockDockingset, setEquibindDocking, rDockRescore, and GlideRescore
+	**- Methods:** setGlideDocking, setRdockDockingset, setEquibindDocking, rDockRescore, and glideRescore
 	
 2. dockingAnalysis.py
 
 	**- Class:** DockingAnalyzer
 
-	**- Methods:** glideAnalysis, rdockAnalysis
+	**- Methods:** glideAnalysis, rdockOutputToDataFrame, and rdockAnalysis
 
 ---
 
@@ -62,7 +62,7 @@ Refinement of the docking pose obtained in the previous step in the pipeline.
 
 **- Module:** peleJob.py
 
-**- Class:** PELE
+**- Class:** PELEJob
 
 **- Methods:** setGlideToPELESimulation, setRdockToPELESimulation, setEquibindToPELESimulation, and PELEDownloader.
 
@@ -76,6 +76,6 @@ Part to analyze the results obtained in the PELE simulations.
 
 **- Class:** PELEAnalyzer
 
-**- Methods:** experimentalDataCollector, equibindDataTrimming, PELEDataCollector, and correlationPlotter.
+**- Methods:** experimentalDataCollector, equibindDataTrimming, PELEDataCollector, correlationPlotter, and simulationAnalyzer
 
 ---
