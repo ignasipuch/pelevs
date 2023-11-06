@@ -3,8 +3,8 @@ import shutil
 from openbabel import openbabel as ob
 import re
 import pandas as pd
-import importlib.resources
-import pelevs
+from pkg_resources import resource_stream, Requirement, resource_listdir
+import io
 
 
 class PELEJob:
@@ -78,6 +78,37 @@ class PELEJob:
 
         if not os.path.isdir('4_pele_simulation/pele_simulation'):
             os.mkdir('4_pele_simulation/pele_simulation')
+
+    def _copyScriptFile(self, output_folder, script_name, no_py=False, subfolder=None, hidden=True):
+        """
+        Copy a script file from the pelevs package.
+
+        Parameters
+        ==========
+
+        """
+        # Get script
+        path = "pelevs"
+        if subfolder != None:
+            path = path+'/'+subfolder
+
+        path_file = os.path.join(path,script_name)
+        package = Requirement.parse("pelevs")
+        script_file = resource_stream(package,path_file)
+        script_file = io.TextIOWrapper(script_file)
+
+        # Write control script to output folder
+        if no_py == True:
+            script_name = script_name.replace('.py', '')
+
+        if hidden:
+            output_path = output_folder+'/._'+script_name
+        else:
+            output_path = output_folder+'/'+script_name
+
+        with open(output_path, 'w') as sof:
+            for l in script_file:
+                sof.write(l)
 
     def _folderHierarchy(self, force_field, truncated, perturbation_protocol, rescoring_method):
         """
@@ -1259,7 +1290,7 @@ class PELEJob:
         else:
             path_destination = output_name
 
-        path_script = 'scripts/pele_downloader.py'
+        script = 'pele_downloader.py'
         path_simulation = '4_pele_simulation'
 
         if not os.path.isdir(path_simulation):
@@ -1268,13 +1299,10 @@ class PELEJob:
             if not os.path.isdir(path_simulation):
                 os.mkdir(path_simulation)
 
+        self._copyScriptFile(path_simulation, script, hidden=False)
+
         file_name = 'download_files.sh'
         download_file_path = os.path.join(path_simulation, file_name)
-
-        # Copying script
-        shutil.copy(path_script, path_simulation)
-
-
         
         # Generating runner
         if protocol_name is not None:
