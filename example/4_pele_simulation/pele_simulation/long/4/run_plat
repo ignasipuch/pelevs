@@ -2,7 +2,7 @@
 #SBATCH -J 4
 #SBATCH --output=PELE.out
 #SBATCH --error=PELE.err
-#SBATCH --ntasks=48
+#SBATCH --ntasks=32
 #SBATCH --time=00-06:00:00
 
 module load ANACONDA/2019.10
