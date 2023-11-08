@@ -1272,7 +1272,7 @@ class PELEJob:
                                     forcefield_list[1], truncated_list[1], perturbation_list[1], rescoring_method_list[1])
         self._PELERunner(simulation_path)
 
-    def PELEDownloader(self, analysis_folder_name=None, protocol_name=None, simulation_folder_name=None, output_name=None):
+    def PELEDownloader(self, analysis_folder_name=None, protocol_name=None, output_name=None):
         """
         Generates and copies files in order to make the volume of data downloaded
         as small as possible. This method is thought to be used after all the jobs wanted 
@@ -1290,6 +1290,9 @@ class PELEJob:
                 path_destination = self.docking_tool
         else:
             path_destination = output_name
+
+        if analysis_folder_name is None:
+            analysis_folder_name = 'standard'
 
         script = 'pele_downloader.py'
         path_simulation = '4_pele_simulation'
