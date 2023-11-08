@@ -243,7 +243,7 @@ class InputPreparation:
             run_path = '1_input_files/qm/{}/qm_job/run.sh'.format(ligand)
 
             with open(run_path, 'w') as filein:
-                filein.writelines('$SCHRODINGER/run python3 qm.py -f {}\n'.format(self.ligands_file))
+                filein.writelines('nohup $SCHRODINGER/run python3 qm.py -f {} &\n'.format(self.ligands_file))
 
             print(' -     Send job to local machine (cactus, bubbles, blossom) to send job.')
 
