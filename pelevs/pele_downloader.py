@@ -91,7 +91,7 @@ def pele_reports_retriever(analysis_folder_name,
         if protocol_name is not None:
             rescorings.append(protocol_name)
 
-        if analysis_folder_name is None:
+        if analysis_folder_name == 'standard':
             analysis_folder_name = 'pele_simulation/'
         
         for root, _, _ in os.walk('{}/'.format(analysis_folder_name)):
