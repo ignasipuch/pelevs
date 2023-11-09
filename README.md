@@ -3,7 +3,7 @@
 
 Repository to create a concrete workflow to work with in drug discovery projects.
 
-There is a usage example in the examples/ folder where you can see the usage of some of the classes and methods of this library.
+For a **usage example** please go to the **examples/** folder where you can see a notebook where of some of the classes and methods of this library are used.
 
 ## Requirements
 
