@@ -103,6 +103,8 @@ def pele_reports_retriever(analysis_folder_name,
                 if not os.path.isdir(new_path):
                     os.makedirs(new_path)
 
+        print(' -    {num} simulations found in {analysis} directory.'.format(num=len(folders_to_check), analysis=analysis_folder_name))
+
         return folders_to_check
 
     def dataset_retriever(analysis_folder_name, 
