@@ -92,7 +92,7 @@ def pele_reports_retriever(analysis_folder_name,
             rescorings.append(protocol_name)
 
         if analysis_folder_name == 'standard':
-            analysis_folder_name = 'pele_simulation/'
+            analysis_folder_name = 'pele_simulation'
         
         for root, _, _ in os.walk('{}/'.format(analysis_folder_name)):
 
@@ -154,7 +154,7 @@ def pele_reports_retriever(analysis_folder_name,
                 Boolean indicating whether the simulation has failed or not.
             """  
 
-            if analysis_folder_name is None:
+            if analysis_folder_name == 'standard':
                 analysis_folder_name = 'pele_simulation'
 
             system = simulation_path.split('/')[-1]
@@ -180,7 +180,6 @@ def pele_reports_retriever(analysis_folder_name,
 
                     for report in [x for x in os.listdir(epoch_path) if x.startswith('report')]:
                         report_path = os.path.join(epoch_path,report)
-                        
                         shutil.copy(report_path,new_epoch_path)
 
             else: failed_bool = True
@@ -189,8 +188,8 @@ def pele_reports_retriever(analysis_folder_name,
 
         failed_simulations = []
 
-        if analysis_folder_name is None:
-            analysis_folder_name = 'pele_simulation/' 
+        if analysis_folder_name == 'standard':
+            analysis_folder_name = 'pele_simulation' 
                
         for folder in folders_to_check:
             for simulation in os.listdir(folder):
