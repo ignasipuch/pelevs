@@ -136,5 +136,5 @@ examples/1_input_files/
 examples/2_ligprep_job/
 examples/3_docking_job/
 examples/4_pele_simulations/
-examples/5_pele_analysis/
+examples/5_pele_analysis/simulations
 examples/.ipynb_checkpoints/
