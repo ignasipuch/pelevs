@@ -810,9 +810,10 @@ class PELEAnalyzer:
             length_df = len(df_original)
             df = df_original.dropna()
             length_df_wo_NaN = len(df)
+            NaN_rows = length_df-length_df_wo_NaN
 
-            print(
-                ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+            if NaN_rows != 0:
+                print(' - Warning: {} rows with NaN have been deleted.'.format(NaN_rows))
 
             if (x_range is not None) or (y_range is not None):
                 df = data_selection(df, x_label, y_label, x_range, y_range)
@@ -830,9 +831,10 @@ class PELEAnalyzer:
             length_df = len(df_original)
             df = df_original.dropna()
             length_df_wo_NaN = len(df)
+            NaN_rows = length_df-length_df_wo_NaN
 
-            print(
-                ' - Warning: {} rows with NaN have been deleted.'.format(length_df-length_df_wo_NaN))
+            if NaN_rows != 0:
+                print(' - Warning: {} rows with NaN have been deleted.'.format(NaN_rows))
 
             if (x_range is not None) or (y_range is not None):
                 df = data_selection(df, x_label, y_label, x_range, y_range)
