@@ -132,4 +132,8 @@ dmypy.json
 .idea
 
 # Test
-test
+examples/1_input_files
+examples/2_ligprep_job
+examples/3_docking_job
+examples/4_pele_simulations
+examples/5_pele_analysis
