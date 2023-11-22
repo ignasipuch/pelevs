@@ -103,7 +103,7 @@ def pele_reports_retriever(analysis_folder_name,
                 if not os.path.isdir(new_path):
                     os.makedirs(new_path)
 
-        print(' -    {num} simulations found in {analysis} directory.'.format(num=len(folders_to_check), analysis=analysis_folder_name))
+        print(' - {num} simulations found in {analysis} directory.'.format(num=len(folders_to_check), analysis=analysis_folder_name))
 
         return folders_to_check
 
@@ -171,18 +171,33 @@ def pele_reports_retriever(analysis_folder_name,
             if os.path.isdir(whole_path):
 
                 failed_bool = False
+                epochs = [x for x in os.listdir(whole_path) if x.isdigit()]
 
-                for epoch in [x for x in os.listdir(whole_path) if x.isdigit()]:
+                if len(epochs) != 0:
 
-                    epoch_path = os.path.join(whole_path,epoch) 
-                    new_epoch_path = os.path.join(ligand_folder,epoch)
-                    
-                    if not os.path.isdir(new_epoch_path):
-                        os.mkdir(new_epoch_path)
+                    for epoch in [x for x in os.listdir(whole_path) if x.isdigit()]:
 
-                    for report in [x for x in os.listdir(epoch_path) if x.startswith('report')]:
-                        report_path = os.path.join(epoch_path,report)
-                        shutil.copy(report_path,new_epoch_path)
+                        epoch_path = os.path.join(whole_path,epoch) 
+                        new_epoch_path = os.path.join(ligand_folder,epoch)
+                        
+                        if not os.path.isdir(new_epoch_path):
+                            os.mkdir(new_epoch_path)
+
+                        for report in [x for x in os.listdir(epoch_path) if x.startswith('report')]:
+                            report_path = os.path.join(epoch_path,report)
+                            shutil.copy(report_path,new_epoch_path)
+                
+                else:
+
+                        new_epoch_path = os.path.join(ligand_folder,'0')
+
+                        if not os.path.isdir(new_epoch_path):
+                            os.mkdir(new_epoch_path)
+
+                        for report in [x for x in os.listdir(whole_path) if x.startswith('report')]:
+                            report_path = os.path.join(whole_path,report)
+                            shutil.copy(report_path,new_epoch_path)
+
 
             else: failed_bool = True
 
