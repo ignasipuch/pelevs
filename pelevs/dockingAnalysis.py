@@ -299,7 +299,7 @@ class DockingAnalyzer:
 
         self.docking_tool = 'glide'
 
-    def _glideDataFrameRetriever(self, protocol):
+    def _glideDataFrameRetriever(self, protocol, poses_per_ligand):
         """
         Retrieves the data frame generated with the Glide docking.
         It also modifies certain columns and values to end up
@@ -338,21 +338,40 @@ class DockingAnalyzer:
             df.to_csv('3_docking_job/Glide_whole_dataset.csv')
 
             # Sorting by energies and keeping only one per molecule
+            df['original_index'] = df.index 
             df_csv_sort = df.sort_values(
                 'r_i_docking_score').reset_index(drop=True)
+            
+            if poses_per_ligand == 1:
 
-            df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
-            sorted_df = df_result.sort_values(['title', 'i_i_glide_lignum'])
+                df_result = df_csv_sort.drop_duplicates(['title', 'i_i_glide_lignum'])
+                sorted_df = df_result.sort_values(['title', 'i_i_glide_lignum'])
 
-            sorted_df = sorted_df.sort_values('r_i_docking_score')
-            sorted_df = sorted_df.drop_duplicates('title')
-            sorted_df = sorted_df.sort_values('title')
+                sorted_df = sorted_df.sort_values('r_i_docking_score')
+                sorted_df = sorted_df.drop_duplicates('title')
+                sorted_df = sorted_df.sort_values('title')
 
-            sorted_df.to_csv('3_docking_job/Glide_dataset.csv')
+                sorted_df.to_csv('3_docking_job/Glide_dataset.csv')
+                self.calculated_data = sorted_df
+            
+            else:
+                print('\n        WARNING! \n\n - For a single ligand there can be multiple conformers. This function gets the {} best poses per ligand regardless of the conformer.'.format(poses_per_ligand))
+                
+                df_list = []
+                for ligand in df_csv_sort['title'].unique():
+                    df_filtered = df_csv_sort[df_csv_sort.title == ligand]
+                    
+                    if len(df_filtered) < poses_per_ligand:
+                        raise Exception('NumberOfPosesMismatch: The number of poses solicited is larger than the length of the dataframe {} < {}'.format(len(df_filtered),poses_per_ligand))
+                    
+                    df_final = df_filtered[:poses_per_ligand].copy()  
+                    df_list.append(df_final)
+                                    
+                concatenated_df = pd.concat(df_list, ignore_index=True)
+                concatenated_df.to_csv('3_docking_job/Glide_dataset.csv')
+                self.calculated_data = concatenated_df
 
             print(' - Csv information imported and sorted (self.calculated_data)')
-
-            self.calculated_data = sorted_df
 
         elif protocol == 'score':
             path_docking = '3_docking_job/glide_score'
@@ -627,7 +646,7 @@ class DockingAnalyzer:
         print(' - Molecular weight plots generated succesfully.')
         print(' - Images stored at 3_docking_job/images\n')
 
-    def glideAnalysis(self, experimental_data, column_name, protocol='dock'):
+    def glideAnalysis(self, poses_per_ligand=1, column_name=None, experimental_data=None, protocol='dock'):
         """
         Uses different hidden methods to retrieve all the data 
         from the glide docking simulation and generate an 
@@ -647,9 +666,12 @@ class DockingAnalyzer:
         self.protocol = protocol
 
         self._glideDockingResultsChecker(protocol)
-        self._glideDataFrameRetriever(protocol)
+        self._glideDataFrameRetriever(protocol, poses_per_ligand)
         self._molecularWeightCalculator()
-        self._correlation(experimental_data, column_name, protocol)
+
+        if experimental_data is not None:
+            self._correlation(experimental_data, column_name, protocol)
+
         self._glideTimePlotter()
 
     def rdockAnalysis(self, experimental_data, column_name, protocol='dock'):

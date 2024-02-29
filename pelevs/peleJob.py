@@ -752,21 +752,48 @@ class PELEJob:
             in pdb format by using the script in: scripts/glide_to_pdb.py.
             """
 
+            def _checkMultiplePoses():
+                """
+                Checks whether there are multiple conformations retrieved per ligand.
+                """
+
+                path_input_select_data = os.path.join('3_docking_job/Glide_dataset.csv')
+
+                df = pd.read_csv(path_input_select_data)
+
+                # Counting number of lines and ligands
+                number_of_ligands = len(df['title'].unique())
+                number_of_lines = len(df)
+
+                if number_of_ligands == number_of_lines:
+                    multiple_poses = False
+                elif number_of_lines > number_of_ligands:
+                    multiple_poses = True
+            
+                return multiple_poses
+
             maegz_to_pdb_path = '3_docking_job/job/output_pdb_files'
             glide_to_pdb_file = 'glide_to_pdb.py'
 
+            multiple_poses_bool = _checkMultiplePoses()
+            
             if os.path.isdir(maegz_to_pdb_path):
                 print(' - Splitting of the maegz file already done.')
 
             else:
                 print(' - Splitting the outputted maegz file into individual pdbs.')
-                print(' - Only the best tautomer/stereoisomer is saved.')
 
                 # Generating folder
                 os.mkdir(maegz_to_pdb_path)
                 self._copyScriptFile('.',glide_to_pdb_file)
 
-                os.system('$SCHRODINGER/run python3 {run_file} -jn {job}'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
+                if not multiple_poses_bool:
+                    print(' - Only the best tautomer/stereoisomer is saved.')
+                    os.system('$SCHRODINGER/run python3 {run_file} -jn {job}'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
+
+                if multiple_poses_bool:
+                    print(' - Multiple conformations saved per ligand.')
+                    os.system('$SCHRODINGER/run python3 {run_file} -jn {job} --multiple_poses'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
 
         def _glideDockingPoseRetriever(simulation_path):
             """
