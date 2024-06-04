@@ -777,23 +777,24 @@ class PELEJob:
 
             multiple_poses_bool = _checkMultiplePoses()
             
-            if os.path.isdir(maegz_to_pdb_path):
+            if os.path.isdir(maegz_to_pdb_path) and len(os.listdir(maegz_to_pdb_path)) != 0:
                 print(' - Splitting of the maegz file already done.')
 
             else:
                 print(' - Splitting the outputted maegz file into individual pdbs.')
 
                 # Generating folder
-                os.mkdir(maegz_to_pdb_path)
+                if not os.path.isdir(maegz_to_pdb_path):
+                    os.mkdir(maegz_to_pdb_path)
                 self._copyScriptFile('.',glide_to_pdb_file)
 
                 if not multiple_poses_bool:
                     print(' - Only the best tautomer/stereoisomer is saved.')
-                    os.system('$SCHRODINGER/run python3 {run_file} -jn {job}'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
+                    os.system('run python3 {run_file} -jn {job}'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
 
                 if multiple_poses_bool:
                     print(' - Multiple conformations saved per ligand.')
-                    os.system('$SCHRODINGER/run python3 {run_file} -jn {job} --multiple_poses'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
+                    os.system('run python3 {run_file} -jn {job} --multiple_poses'.format(run_file=os.path.join('.','._{}'.format(glide_to_pdb_file)),job='glide_job'))
 
         def _glideDockingPoseRetriever(simulation_path):
             """
