@@ -106,6 +106,8 @@ class InputPreparation:
                         'FormatLigandsError: The format of the ligand file should be a csv with smiles and id.')
             elif ligands_format == 'pdb':
                 print(' -     The ligand was passed in a pdb.')  
+            elif ligands_format == 'sdf':
+                print(' -     The ligand was passed in a sdf.') 
             else:
                 raise Exception(
                     'FormatLigandsError: The format of the ligand file should be a csv with smiles and id.')
