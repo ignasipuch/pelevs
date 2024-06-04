@@ -85,6 +85,8 @@ class DockingJob:
         directory to perform  acertain kind of docking.
         """
 
+        self.prepared_ligands = False
+
         if os.path.isdir('1_input_files/receptor/'):
             receptor = '1_input_files/receptor/' + \
                 os.listdir('1_input_files/receptor/')[0]
@@ -96,6 +98,15 @@ class DockingJob:
             ligands = '2_ligprep_job/job/' + \
                 [x for x in os.listdir('2_ligprep_job/job/')
                  if x.endswith('.sdf')][0]
+            
+        elif os.path.isdir('1_input_files/ligands'):
+            files = os.listdir('1_input_files/ligands')
+            if len(files) == 1 and files[0].split('.')[1] == 'sdf':
+                ligands = '1_input_files/ligands/' + files[0]
+                self.prepared_ligands = True
+                print(' -     The prepared ligands are already prepared and in sdf format.') 
+
+
         else:
             raise Exception(
                 'MissingLigandsFile: Ligands file should be located at \'2_ligprep_job/job/\'')
@@ -161,6 +172,7 @@ class DockingJob:
             Number of output conformations in the docking.
         """
 
+        input_ligand_path = '1_input_files/ligands/'
         docking_job_path = '3_docking_job/job'
         ligprep_path = '2_ligprep_job/job/'
         glide_score_path = '3_docking_job/glide_score'
@@ -168,7 +180,11 @@ class DockingJob:
 
         if protocol == 'dock':
             shutil.copy(grid_file, docking_job_path)
-            shutil.copy(ligprep_path + self.ligands, docking_job_path)
+
+            if not self.prepared_ligands:
+                shutil.copy(ligprep_path + self.ligands, docking_job_path)
+            else:
+                shutil.copy(input_ligand_path + self.ligands, docking_job_path)
 
             grid_path = os.path.join(
                 docking_job_path, 'glide_job.sh')
