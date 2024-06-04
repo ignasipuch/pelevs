@@ -355,14 +355,16 @@ class DockingAnalyzer:
                 self.calculated_data = sorted_df
             
             else:
-                print('\n        WARNING! \n\n - For a single ligand there can be multiple conformers. This function gets the {} best poses per ligand regardless of the conformer.'.format(poses_per_ligand))
+                print('\n        WARNING! \n\n - For a single ligand there can be multiple conformers. This function gets the {} best poses per ligand regardless of the conformer.\n'.format(poses_per_ligand))
                 
                 df_list = []
                 for ligand in df_csv_sort['title'].unique():
                     df_filtered = df_csv_sort[df_csv_sort.title == ligand]
                     
                     if len(df_filtered) < poses_per_ligand:
-                        raise Exception('NumberOfPosesMismatch: The number of poses solicited is larger than the length of the dataframe {} < {}'.format(len(df_filtered),poses_per_ligand))
+                        print('        WARNING! The number of poses solicited is larger than the length of the dataframe {} < {}'.format(len(df_filtered),poses_per_ligand))
+                        print('        All the poses will be taken.\n')
+                        poses_per_ligand = len(df_filtered)
                     
                     df_final = df_filtered[:poses_per_ligand].copy()  
                     df_list.append(df_final)
@@ -397,6 +399,11 @@ class DockingAnalyzer:
         invested in performing the docking.
         """
 
+        path_images = '3_docking_job/images/'
+
+        if not os.path.isdir(path_images):
+            os.mkdir(path_images)
+            
         df = self.calculated_data
 
         plt.figure()
@@ -646,7 +653,7 @@ class DockingAnalyzer:
         print(' - Molecular weight plots generated succesfully.')
         print(' - Images stored at 3_docking_job/images\n')
 
-    def glideAnalysis(self, poses_per_ligand=1, column_name=None, experimental_data=None, protocol='dock'):
+    def glideAnalysis(self, poses_per_ligand=1, column_name=None, experimental_data=None, protocol='dock', molecular_weight=True):
         """
         Uses different hidden methods to retrieve all the data 
         from the glide docking simulation and generate an 
@@ -661,13 +668,17 @@ class DockingAnalyzer:
             Name of the column where the data in the csv is stored.
         protocol : str
             Protocol used to obtain the results retrieved.
+        molecular_weight : bool
+            If True, the molecular weight of the ligands will be calculated.
         """
 
         self.protocol = protocol
 
         self._glideDockingResultsChecker(protocol)
         self._glideDataFrameRetriever(protocol, poses_per_ligand)
-        self._molecularWeightCalculator()
+
+        if molecular_weight:
+            self._molecularWeightCalculator()
 
         if experimental_data is not None:
             self._correlation(experimental_data, column_name, protocol)
