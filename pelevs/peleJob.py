@@ -1349,3 +1349,68 @@ class PELEJob:
                 )
 
         print(' - Run:\n   bash {}\n   After PELE simulations have been performed.'.format(file_name))
+
+    def extractInputStructures(self, docking_tool, delete_simulation=False):
+        """
+        Extracts the input structures used in the PELE simulations.
+
+        Parameters
+        ==========
+        docking_tool : str
+            Docking tool used in the PELE simulation.
+        delete_simulation : bool
+            Boolean to determine whether the PELE simulation is deleted or not.
+        """
+
+        def _copyGeneratedPELEStructures(path_destination, path_pele_simulation):
+            """
+            Copies the input structures used in the PELE simulations.
+
+            Parameters
+            ==========
+            path_destination : str
+                Path where the input structures are going to be stored.
+            """
+
+            if not os.path.isdir(path_destination):
+                os.mkdir(path_destination)
+
+            protocol = os.path.join(os.listdir(path_pele_simulation)[0])
+            path_pele_ligands = os.path.join(path_pele_simulation, protocol)
+
+            for ligand_folder in [x for x in os.listdir(path_pele_ligands) if (x != '.ipynb_checkpoint') and (x != 'general_runner.sh')]:
+                ligand_folder_path = os.path.join(path_pele_ligands, ligand_folder)
+                input_structure = ligand_folder + '.pdb'
+                input_structure_path = os.path.join(ligand_folder_path,input_structure)
+                shutil.copy(input_structure_path, path_destination)
+
+        path_simulation = '4_pele_simulation'
+        path_destination = os.path.join(path_simulation,'input_structures')
+        path_pele_simulation = os.path.join(path_simulation,'pele_simulation')
+
+        if not os.path.isdir(path_simulation):
+
+            print('     - Extracting input structures.')
+            print('     - All the unnecessary files from the following process will be deleted.')
+            print(' ------------------------------------------\n')
+
+            delete_simulation = True
+            if docking_tool == 'glide':
+                self.setGlideToPELESimulation(rescoring_method='xshort')
+                print('\n ------------------------------------------\n')
+            elif docking_tool == 'rdock':
+                self.setRdockToPELESimulation(rescoring_method='xshort')
+                print('\n ------------------------------------------\n')
+            elif docking_tool == 'equibind':
+                self.setEquibindToPELESimulation(rescoring_method='xshort')
+                print('\n ------------------------------------------\n')
+            else:
+                raise Exception('InvalidDockingTool: The docking tool has to be either glide, rdock or equibind.')
+            
+        _copyGeneratedPELEStructures(path_destination, path_pele_simulation)
+    
+        print('     - Extraction done to {}.'.format(path_destination))
+
+        if delete_simulation:
+            shutil.rmtree(path_pele_simulation)
+            print('     - {} deleted.'.format(path_pele_simulation))
