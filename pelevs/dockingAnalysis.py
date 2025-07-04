@@ -595,22 +595,42 @@ class DockingAnalyzer:
 
                 # Open the file
                 with open(file_path, "r") as file:
+                    score = None
+                    ligand = "Unknown"
+                    conformer = "Unknown"
+
                     for line in file:
+                        line = line.strip()
+
                         if score_bool:
                             score = line.split()[0]
-                        if conformer_bool:
-                            ligand, conformer = line.split("-")
-                            data.append([filename, counter, ligand, conformer, score])
-                        if "$$$$" in line:
-                            counter += 1
-                        if ">  <SCORE>" in line:
-                            score_bool = True
-                        else:
                             score_bool = False
-                        if ">  <s_lp_Variant>" in line:
-                            conformer_bool = True
-                        else:
+
+                        elif conformer_bool:
+                            parts = line.split("-")
+                            if len(parts) == 2:
+                                ligand, conformer = parts
+                            else:
+                                ligand = line
+                                conformer = "Unknown"
                             conformer_bool = False
+
+                        elif "$$$$" in line:
+                            if score is not None:
+                                data.append(
+                                    [filename, counter, ligand, conformer, score]
+                                )
+                            counter += 1
+                            # Reset per-entry variables
+                            score = None
+                            ligand = "Unknown"
+                            conformer = "Unknown"
+
+                        elif ">  <SCORE>" in line:
+                            score_bool = True
+
+                        elif ">  <s_lp_Variant>" in line:
+                            conformer_bool = True
 
             # Write the extracted data to a CSV file
             output_file = "rDock_data.csv"
