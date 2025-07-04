@@ -596,8 +596,8 @@ class DockingAnalyzer:
                 # Open the file
                 with open(file_path, "r") as file:
                     score = None
-                    ligand = "Unknown"
-                    conformer = "Unknown"
+                    ligand = "-"
+                    conformer = "-"
 
                     for line in file:
                         line = line.strip()
@@ -612,7 +612,7 @@ class DockingAnalyzer:
                                 ligand, conformer = parts
                             else:
                                 ligand = line
-                                conformer = "Unknown"
+                                conformer = "-"
                             conformer_bool = False
 
                         elif "$$$$" in line:
@@ -623,8 +623,8 @@ class DockingAnalyzer:
                             counter += 1
                             # Reset per-entry variables
                             score = None
-                            ligand = "Unknown"
-                            conformer = "Unknown"
+                            ligand = "-"
+                            conformer = "-"
 
                         elif ">  <SCORE>" in line:
                             score_bool = True
